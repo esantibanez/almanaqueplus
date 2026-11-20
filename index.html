@@ -135,20 +135,19 @@
   .barra h2.largo { font-size:21px; text-transform:none; letter-spacing:0; }
   .barra h2.largo::first-letter { text-transform:uppercase; }
   .vistas button { border-radius:0; margin:0 !important; } .vistas button:first-child { border-radius:5px 0 0 5px; } .vistas button:last-child { border-radius:0 5px 5px 0; }
-  .vdia { background:var(--papel); border:1px solid var(--tinta); border-radius:6px; padding:14px 18px; outline:1px solid var(--tinta); outline-offset:-5px; }
-  .vdia .rec { max-width:none; }
-  .vsem { display:grid; grid-template-columns:repeat(7, 1fr); gap:5px; }
-  .sdia { background:var(--papel); border:1px solid #d9cba4; border-radius:6px; padding:6px 7px; font-size:12.5px; cursor:pointer; display:flex; flex-direction:column; gap:3px; }
-  .sdia:hover, .sdia:focus { box-shadow:0 0 0 2px var(--naranja); outline:none; }
-  .sdia.fer { background:#FBE9D2; } .sdia.hoy { border:2px solid var(--tinta); box-shadow:0 0 0 3px var(--naranja); }
-  .scab { display:flex; align-items:baseline; gap:5px; border-bottom:1px solid #d9cba4; padding-bottom:3px; }
-  .sdow { text-transform:uppercase; font-size:10.5px; letter-spacing:1px; color:var(--gris); } .snum { font:700 24px "Playfair", Georgia, serif; margin-left:auto; }
-  .sdia.dom .snum, .sdia.fer .snum, .sdia.dom .sdow { color:var(--rojo); } .smes { font-size:11px; color:var(--gris); }
-  .ssanto { font-style:italic; font-size:12.5px; line-height:1.2; } .sfila svg { vertical-align:middle; } .sgris { color:#aaa; } .ssat { color:#1b4f72; font-size:11.5px; }
-  .slab { display:inline-block; background:#FDE7BF; border-radius:8px; padding:0 5px; margin:1px 2px 0 0; font-size:11px; }
-  .srec { margin-top:auto; padding-top:4px; }
+  .vanual { display:grid; grid-template-columns:repeat(auto-fill, minmax(245px, 1fr)); gap:8px; }
+  .vmeses { grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); }
+  .tarj { background:var(--papel); border:1px solid #d9cba4; border-radius:6px; padding:8px 10px; cursor:pointer; font-size:12.5px; display:flex; flex-direction:column; gap:4px; }
+  .tarj:hover, .tarj:focus { box-shadow:0 0 0 2px var(--naranja); outline:none; }
+  .tarj.hoy { border:2px solid var(--tinta); box-shadow:0 0 0 3px var(--naranja); }
+  .tcab { display:flex; align-items:baseline; justify-content:space-between; border-bottom:1px solid #d9cba4; padding-bottom:3px; }
+  .tnum { font:700 16px "Playfair", Georgia, serif; } .trango { color:var(--gris); font-size:12px; } .tmes { font:900 20px "Playfair", Georgia, serif; text-transform:uppercase; letter-spacing:1px; }
+  .rfila { line-height:1.35; } .rf { display:inline-block; margin-right:8px; } .rf svg { vertical-align:middle; }
+  .rfer { color:var(--rojo); font-size:12px; } .rlab { color:var(--gris); font-size:11.5px; } .rextra { color:#2a6f97; font-size:12px; } .rest2 { font-size:12px; }
+  .rrec .chip { margin:1px 0; }
+  .slab { display:inline-block; background:#FDE7BF; border-radius:8px; padding:0 5px; margin:1px 2px 0 0; font-size:11.5px; }
   @media (max-width:720px) {
-    .vsem { grid-template-columns:1fr; } .sdia { font-size:13.5px; } .barra h2.largo { font-size:17px; } .vdia { padding:10px; }
+    .vanual, .vmeses { grid-template-columns:1fr; }
     .glab { font-size:10px; letter-spacing:0; } .ltab { min-width:100%; }
     .ubic { flex-direction:column; } .mapaub { width:100%; height:190px; } .busca input { width:160px; }
     .gdia { min-height:78px; padding:2px 3px 0; } .gnum { font-size:15px; } .gcli span, .gfer, .gico { display:none; } .glun svg { width:12px; height:12px; }
@@ -244,8 +243,8 @@ Fuentes: algoritmos astronómicos de J. Meeus · SunCalc · Open-Meteo · NORAD/
 <script src="lib/leaflet.js"></script>
 <script src="lib/suncalc.js"></script>
 <script src="lib/satellite.min.js"></script>
-<script src="santoral.js?v=202611201439"></script>
-<script src="siembra.js?v=202611201439"></script>
-<script src="almanaque.js?v=202611201439"></script>
+<script src="santoral.js?v=202611201444"></script>
+<script src="siembra.js?v=202611201444"></script>
+<script src="almanaque.js?v=202611201444"></script>
 </body>
 </html>

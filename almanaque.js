@@ -304,13 +304,14 @@ function render() {
       <div><b>${e.nombre.split(":")[0]}</b><br>${fmt(e.t, { weekday: "short", day: "numeric" })} · ${hora(e.t)} h<br><small>${e.nombre.split(": ")[1]}</small></div></div>`).join("");
   diasMes = [];
   for (let d = 1; d <= nd; d++) diasMes.push(armarDia(anio, mes, d));
-  const tit = document.getElementById("titMes"), sel = diasMes[dia - 1];
-  if (vista === "dia") { tit.textContent = `${fmt(sel.f, { weekday: "long" })} ${dia} de ${NOMBRE_MES[mes].toLowerCase()} de ${anio}`; renderDia(); }
-  else if (vista === "semana") renderSemana(tit);
-  else { tit.textContent = `${NOMBRE_MES[mes]} ${anio}`; vista === "mes" ? renderCal() : renderLista(); }
-  tit.classList.toggle("largo", vista !== "mes" && vista !== "lista");
+  const tit = document.getElementById("titMes");
+  document.getElementById("fases").style.display = (vista === "dia" || vista === "lista") ? "" : "none";
+  if (vista === "dia") { tit.textContent = `${NOMBRE_MES[mes]} ${anio}`; renderCal(); }
+  else if (vista === "lista") { tit.textContent = `${NOMBRE_MES[mes]} ${anio}`; renderLista(); }
+  else if (vista === "semana") { tit.textContent = `Semanas de ${anio}`; renderSemanas(); }
+  else { tit.textContent = `Meses de ${anio}`; renderMeses(); }
   ["dia", "semana", "mes", "lista"].forEach(v => document.getElementById("v_" + v).classList.toggle("act", vista === v));
-  const ant = { dia: "Día anterior", semana: "Semana anterior", mes: "Mes anterior", lista: "Mes anterior" }[vista];
+  const ant = { dia: "Mes anterior", semana: "Año anterior", mes: "Año anterior", lista: "Mes anterior" }[vista];
   document.getElementById("ant").setAttribute("aria-label", ant); document.getElementById("sig").setAttribute("aria-label", ant.replace("anterior", "siguiente"));
   const fueraOrb = diaBo(anio, mes, 1, 0) > Date.now() + MAX_DIAS_ORBITA * 86400000 || diaBo(anio, mes + 1, 1, 0) < Date.now() - MAX_DIAS_ORBITA * 86400000;
   document.getElementById("notaSat").textContent = !orbitasListas ? "Satélites: no se pudieron cargar las órbitas." :
@@ -319,31 +320,72 @@ function render() {
 }
 function irA(a, m, d, v) { const f = new Date(Date.UTC(a, m, d)); anio = f.getUTCFullYear(); mes = f.getUTCMonth(); dia = f.getUTCDate(); if (v) vista = v; render();
   document.getElementById("vista").scrollIntoView({ behavior: "smooth", block: "start" }); }
-// ---- Vista por día -------------------------------------------------------------------
-function renderDia() {
-  document.getElementById("vista").innerHTML = `<div class="vdia">${fichaHTML(diasMes[dia - 1], false)}</div>`;
+// ---- Resumen de un grupo de días (semana o mes) -----------------------------------------
+const NOM_EST = { bien: "Buen momento", posible: "Posible", no: "No conviene", regar: "Regar", ligero: "Riego ligero", fuera: "Fuera de época / no hace falta", na: "No aplica", sd: "Sin datos" };
+let memoAnio = { k: null, v: null };
+function diasDelAnio(a) {
+  const k = [a, lugar.lat, lugar.lon, cultivo, actividad, orbitasListas, Object.keys(clima).length, claveDia(new Date())].join("|");
+  if (memoAnio.k === k) return memoAnio.v;
+  const out = [];
+  for (let m = 0; m < 12; m++) { const nd = new Date(Date.UTC(a, m + 1, 0)).getUTCDate(); for (let d = 1; d <= nd; d++) out.push(armarDia(a, m, d)); }
+  memoAnio = { k, v: out };
+  return out;
 }
-// ---- Vista por semana ----------------------------------------------------------------
-function renderSemana(tit) {
-  const f = new Date(Date.UTC(anio, mes, dia)), ini = dia - f.getUTCDay(), dias = [];
-  for (let i = 0; i < 7; i++) dias.push(armarDia(anio, mes, ini + i));
-  const p = dias[0], u = dias[6];
-  tit.textContent = p.m === u.m ? `Semana del ${p.d} al ${u.d} de ${NOMBRE_MES[u.m].toLowerCase()}` : `Semana del ${p.d} de ${NOMBRE_MES[p.m].toLowerCase()} al ${u.d} de ${NOMBRE_MES[u.m].toLowerCase()}`;
-  document.getElementById("vista").innerHTML = `<div class="vsem">${dias.map(x => {
-    const cl = x.cl, lab = x.trad.filter(L => intereses.has(L.id));
-    return `<div class="sdia ${x.dom ? "dom" : ""} ${x.fer ? "fer" : ""} ${x.hoy ? "hoy" : ""}" data-a="${x.a}" data-m="${x.m}" data-d="${x.d}" tabindex="0" role="button">
-      <div class="scab"><span class="sdow">${fmt(x.f, { weekday: "long" })}</span><span class="snum">${x.d}</span>${x.m !== mes ? `<span class="smes">${NOMBRE_MES[x.m].slice(0, 3).toLowerCase()}</span>` : ""}</div>
-      <div class="ssanto">${x.santo}</div>${x.marcas.map(marcaHTML).join("")}
-      <div class="sfila">☀️ ${hora(x.sol.sunrise)} – ${hora(x.sol.sunset)}</div>
-      <div class="sfila">${lunaSVG(x.il.fraction, x.cre, 16)} ${x.fz ? `<b>${FASES[x.fz.tipo][0]}</b> ${hora(x.fz.t)}` : `${nombreFase(x.il.fraction, x.cre)} ${Math.round(x.il.fraction * 100)} %`}</div>
-      ${cl ? `<div class="sfila">${(CLIMA[cl.cod] || [""])[0]} ${Math.round(cl.max)}° / ${Math.round(cl.min)}°${cl.lluvia >= 0.1 ? ` · 💧 ${cl.lluvia.toFixed(cl.lluvia < 10 ? 1 : 0)} mm` : ""}</div>` : `<div class="sfila sgris">Sin pronóstico</div>`}
-      ${x.pas.length ? `<div class="sfila ssat">🛰️ ${x.pas.map(z => `${z.s.nombre} ${hora(z.t)}`).join(" · ")}</div>` : ""}
-      ${lab.length ? `<div class="sfila">${lab.map(L => `<span class="slab">${L.ico} ${L.nombre}</span>`).join("")}</div>` : ""}
-      <div class="srec"><span class="chip e-${x.rec.estado}">${CULTIVOS[cultivo].nombre}: ${x.rec.corto}</span>
-        ${verLuna && x.rec.tradicion && x.rec.tradicion.fav ? `<span class="chip trad">🌙</span>` : ""}${x.rec.certeza ? `<div class="cert">Certeza ${NIV[x.rec.certeza.n].toLowerCase()}</div>` : ""}</div>
-    </div>`; }).join("")}</div>`;
-  document.querySelectorAll(".sdia").forEach(el => { const go = () => irA(+el.dataset.a, +el.dataset.m, +el.dataset.d, "dia");
-    el.onclick = go; el.onkeydown = e => { if (e.key === "Enter") go(); }; });
+function resumen(dias) {
+  const h = [];
+  // fases de la luna
+  const fz = dias.filter(x => x.fz);
+  if (fz.length) h.push(`<div class="rfila">${fz.map(x => `<span class="rf">${lunaSVG([0, 0.5, 1, 0.5][x.fz.tipo], x.fz.tipo < 2, 14)} ${FASES[x.fz.tipo][0]} <b>${x.d}${dias.length > 7 ? "" : ` ${NOMBRE_MES[x.m].slice(0, 3).toLowerCase()}`}</b></span>`).join("")}</div>`);
+  // feriados y fechas
+  const fer = dias.flatMap(x => x.marcas.filter(z => z.tipo === "feriado" || z.tipo === "departamental").map(z => ({ x, z })));
+  if (fer.length) h.push(`<div class="rfila rfer">${fer.map(o => `<div><b>${o.x.d}</b> ${o.z.txt}</div>`).join("")}</div>`);
+  // labores lunares elegidas
+  const lab = LABORES.filter(L => intereses.has(L.id)).map(L => ({ L, d: dias.filter(x => x.trad.includes(L)).map(x => x.d) })).filter(o => o.d.length);
+  if (lab.length) h.push(`<div class="rfila">${lab.map(o => `<span class="slab" title="${o.L.nombre}">${o.L.ico} ${rangos(o.d)}</span>`).join("")}</div>`);
+  // recomendación del cultivo: días por estado
+  const cuenta = {}; dias.forEach(x => { cuenta[x.rec.estado] = (cuenta[x.rec.estado] || 0) + 1; });
+  const orden = ["bien", "regar", "posible", "ligero", "no", "fuera", "na", "sd"].filter(e => cuenta[e]);
+  h.push(`<div class="rfila rrec"><span class="rlab">${CULTIVOS[cultivo].nombre} · ${ACTIVIDADES[actividad].toLowerCase()}:</span> ${orden.map(e =>
+    `<span class="chip e-${e}">${NOM_EST[e]}${cuenta[e] === dias.length ? "" : ` · ${cuenta[e]} d`}</span>`).join(" ")}</div>`);
+  // lluvia y satélites
+  const conClima = dias.filter(x => x.cl);
+  const extra = [];
+  if (conClima.length) extra.push(`💧 ${conClima.reduce((s, x) => s + (x.cl.lluvia || 0), 0).toFixed(0)} mm${conClima.length < dias.length ? ` <small>(${conClima.length} de ${dias.length} días con datos)</small>` : ""}`);
+  const np = dias.reduce((s, x) => s + x.pas.length, 0);
+  if (np) extra.push(`🛰️ ${np} pasada${np > 1 ? "s" : ""} de satélite`);
+  if (extra.length) h.push(`<div class="rfila rextra">${extra.join(" · ")}</div>`);
+  return h.join("");
+}
+// ---- Semanas del año ----------------------------------------------------------------------
+function renderSemanas() {
+  const todos = diasDelAnio(anio), sem = [];
+  let actual = [];
+  todos.forEach(x => { if (fmt(x.f, { weekday: "long" }) === "domingo" && actual.length) { sem.push(actual); actual = []; } actual.push(x); });
+  if (actual.length) sem.push(actual);
+  document.getElementById("vista").innerHTML = `<div class="vanual">${sem.map((s, i) => {
+    const p = s[0], u = s[s.length - 1], hoy = s.some(x => x.hoy);
+    const rango = p.m === u.m ? `${p.d}–${u.d} ${NOMBRE_MES[u.m].slice(0, 3).toLowerCase()}` : `${p.d} ${NOMBRE_MES[p.m].slice(0, 3).toLowerCase()} – ${u.d} ${NOMBRE_MES[u.m].slice(0, 3).toLowerCase()}`;
+    return `<div class="tarj ${hoy ? "hoy" : ""}" data-m="${p.m}" tabindex="0" role="button">
+      <div class="tcab"><span class="tnum">Semana ${i + 1}</span><span class="trango">${rango}</span></div>${resumen(s)}</div>`; }).join("")}</div>`;
+  document.querySelectorAll(".tarj").forEach(el => { const go = () => irA(anio, +el.dataset.m, 1, "dia"); el.onclick = go; el.onkeydown = e => { if (e.key === "Enter") go(); }; });
+  document.querySelector(".tarj.hoy")?.scrollIntoView({ block: "nearest" });
+}
+// ---- Meses del año ------------------------------------------------------------------------
+function renderMeses() {
+  const todos = diasDelAnio(anio), est = estaciones(anio), C = CULTIVOS[cultivo];
+  document.getElementById("vista").innerHTML = `<div class="vanual vmeses">${NOMBRE_MES.map((nom, m) => {
+    const dias = todos.filter(x => x.m === m), hoy = dias.some(x => x.hoy);
+    const e = est.find(z => claveDia(z.t).endsWith(`/${String(m + 1).padStart(2, "0")}/${anio}`));
+    let epoca = "";
+    if (actividad === "siembra") { const S = C.siembra; epoca = S.principal.includes(m + 1) ? `<span class="chip e-bien">Época principal de siembra</span>` : S.secundaria.includes(m + 1) ? `<span class="chip e-posible">Siembra posible${(S.conRiego || []).includes(m + 1) ? " con riego" : ""}</span>` : `<span class="chip e-fuera">Fuera de época de siembra</span>`; }
+    else if (actividad === "poda") epoca = !C.poda ? `<span class="chip e-na">${C.podaNota.split(".")[0]}</span>` : C.poda.meses.includes(m + 1) ? `<span class="chip e-bien">Época de poda</span>` : `<span class="chip e-fuera">Fuera de época de poda</span>`;
+    else epoca = `<span class="chip e-fuera">Riego: depende de la lluvia de cada día</span>`;
+    return `<div class="tarj ${hoy ? "hoy" : ""}" data-m="${m}" tabindex="0" role="button">
+      <div class="tcab"><span class="tmes">${nom}</span></div>
+      <div class="rfila"><span class="rlab">${C.nombre}:</span> ${epoca}</div>
+      ${e ? `<div class="rfila rest2">${e.nombre.includes("Solsticio") ? "☀️" : "🌗"} ${e.nombre} <b>${+fmt(e.t, { day: "numeric" })}</b></div>` : ""}
+      ${resumen(dias).replace(/<div class="rfila rrec">[\s\S]*?<\/div>/, dias.some(x => x.cl) ? "$&" : "")}</div>`; }).join("")}</div>`;
+  document.querySelectorAll(".tarj").forEach(el => { const go = () => irA(anio, +el.dataset.m, 1, "dia"); el.onclick = go; el.onkeydown = e => { if (e.key === "Enter") go(); }; });
 }
 function renderCal() {
   const cab = ["do.", "lu.", "ma.", "mi.", "ju.", "vi.", "sá."];
@@ -364,7 +406,7 @@ function renderCal() {
       <div class="grec e-${x.rec.estado}">${x.rec.corto}</div></div>`;
   }
   document.getElementById("vista").innerHTML = h + "</div>";
-  document.querySelectorAll(".gdia").forEach(el => { const go = () => irA(anio, mes, +el.dataset.d, "dia"); el.onclick = go; el.onkeydown = e => { if (e.key === "Enter") go(); }; });
+  document.querySelectorAll(".gdia").forEach(el => { const go = () => ficha(+el.dataset.d); el.onclick = go; el.onkeydown = e => { if (e.key === "Enter") go(); }; });
 }
 function renderLista() {
   let html = `<table><thead><tr><th>Día</th><th>Santoral y fechas</th><th>☀️ Sol<br><small>sale / se pone</small></th><th>🌙 Luna</th><th class="cli">Clima</th>
@@ -383,7 +425,7 @@ function renderLista() {
       <td class="sat">${x.pas.map(p => `<div><b>${p.s.nombre}</b> ${hora(p.t)}</div>`).join("")}</td></tr>`;
   }
   document.getElementById("vista").innerHTML = html + "</tbody></table>";
-  document.querySelectorAll("#vista tr[data-d]").forEach(el => el.onclick = () => irA(anio, mes, +el.dataset.d, "dia"));
+  document.querySelectorAll("#vista tr[data-d]").forEach(el => el.onclick = () => ficha(+el.dataset.d));
 }
 // ---- Ficha completa de un día -----------------------------------------------------
 function fichaHTML(x, modal) {
@@ -455,8 +497,7 @@ function renderHoy() {
 // ---- Inicio ---------------------------------------------------------------------
 async function actualizar() { await cargarClima(); for (const k in cache) delete cache[k]; render(); }
 function mover(s) {
-  if (vista === "dia") irA(anio, mes, dia + s);
-  else if (vista === "semana") irA(anio, mes, dia + 7 * s);
+  if (vista === "semana" || vista === "mes") irA(anio + s, mes, 1);
   else { const nd = new Date(Date.UTC(anio, mes + s + 1, 0)).getUTCDate(); irA(anio, mes + s, Math.min(dia, nd)); }
 }
 document.getElementById("ant").onclick = () => mover(-1);
