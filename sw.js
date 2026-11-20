@@ -1,6 +1,6 @@
 /* Almanaque Plus — service worker: funciona sin internet y avisa cuando hay versión nueva.
    VERSION se cambia en cada publicación; eso hace que los teléfonos detecten la actualización. */
-const VERSION = "202611201559";
+const VERSION = "202611201605";
 const CACHE = "almanaque-plus-" + VERSION;
 const BASE = [
   "./", "index.html", "pwa.js", "campo.js", "almanaque.js", "siembra.js", "santoral.js", "manifest.webmanifest",
@@ -23,7 +23,7 @@ self.addEventListener("message", e => { if (e.data === "actualizar") self.skipWa
 self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin) return;   // clima, mapas y buscador van siempre por internet
-  const pagina = req.mode === "navigate" || url.pathname.endsWith("tles.txt") || url.pathname.endsWith("focos.json");
+  const pagina = req.mode === "navigate" || url.pathname.endsWith("tles.txt") || url.pathname.endsWith("focos.json") || /\.(js|css|webmanifest)$/.test(url.pathname);
   if (pagina) {   // página y órbitas: primero internet, si no hay, lo guardado
     e.respondWith(fetch(req).then(r => { const copia = r.clone(); caches.open(CACHE).then(c => c.put(req, copia)); return r; })
       .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match("index.html"))));
