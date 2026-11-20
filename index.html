@@ -15,6 +15,7 @@
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F4A21E">
+<link rel="stylesheet" href="lib/leaflet.css">
 <link rel="icon" type="image/png" href="favicon.png">
 <style>
   @font-face { font-family:"Playfair"; src:url(lib/fonts/playfair-display-latin-400-normal.woff2) format("woff2"); font-weight:400; font-display:swap; }
@@ -113,7 +114,16 @@
   .otras { margin-top:8px; font-size:13px; border-top:1px dashed #ddd; padding-top:6px; } .otra { margin:3px 0; }
   .fbloque { font-size:13.5px; margin:6px 0; } .fbloque svg { vertical-align:middle; }
   #vista table tr[data-d] { cursor:pointer; }
+  .ubic { display:flex; gap:14px; background:var(--papel); border:1px solid var(--tinta); border-radius:6px; padding:12px; margin-bottom:12px; outline:1px solid var(--tinta); outline-offset:-5px; }
+  .ubtxt { flex:1; min-width:0; } .ubtit { font:700 22px "Playfair", Georgia, serif; } .ubsub { color:var(--gris); font-size:13.5px; margin-bottom:8px; }
+  .ubbot { display:flex; flex-wrap:wrap; gap:6px; align-items:center; } .busca { display:flex; gap:4px; }
+  .busca input { font:14px "OldStd", Georgia, serif; padding:5px 8px; border:1px solid var(--tinta); border-radius:5px; width:210px; background:#fff; }
+  button.prim { background:var(--tinta); color:var(--naranja); font-weight:bold; }
+  .resbusca div { padding:4px 6px; cursor:pointer; border-bottom:1px dotted #cdbf9c; font-size:14px; } .resbusca div:hover { background:#FDE7BF; }
+  .ubnota { font-size:12px; color:var(--gris); margin-top:8px; font-style:italic; }
+  .mapaub { width:340px; height:210px; border:1px solid var(--tinta); border-radius:4px; flex-shrink:0; }
   @media (max-width:720px) {
+    .ubic { flex-direction:column; } .mapaub { width:100%; height:190px; } .busca input { width:160px; }
     .gdia { min-height:78px; padding:2px 3px 0; } .gnum { font-size:15px; } .gcli span, .gfer, .gico { display:none; } .glun svg { width:12px; height:12px; }
     .grec { font-size:9.5px; margin:0 -3px 0; } .gtrad span { display:none; } .vistas { margin-left:0; }
     header h1 { font-size:23px; }
@@ -124,7 +134,7 @@
   }
   @media print {
     header { background:none; color:#000; border-bottom:2px solid #000; padding:4px; } header img { width:44px; } header .sub { color:#333; }
-    #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
+    .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
     body { background:#fff; font-size:11px; } main { padding:0; max-width:none; }
     th { background:#eee; color:#000; } td { font-size:10.5px; padding:3px; } td.num { font-size:15px; }
     tr { page-break-inside:avoid; } tr.hoy td { background:none !important; }
@@ -140,15 +150,23 @@
   <div class="marca">al estilo del clásico Bristol</div>
 </header>
 <main>
+  <div class="ubic">
+    <div class="ubtxt"><div class="ubtit">📍 <span id="lugarNom">Roboré</span></div><div class="ubsub" id="lugarDet"></div>
+      <div class="ubbot"><button id="btnGeo" class="prim">📍 Usar mi ubicación</button>
+        <form id="busca" class="busca" autocomplete="off"><input id="buscaTxt" type="search" placeholder="Buscar ciudad o comunidad…" aria-label="Buscar lugar"><button>Buscar</button></form>
+        <select id="lugar" aria-label="Lugares frecuentes"><option value="">Lugares frecuentes…</option>
+          <option value="robore">Roboré</option><option value="santiago">Santiago de Chiquitos</option>
+          <option value="chochis">Chochís</option><option value="scz">Santa Cruz de la Sierra</option></select></div>
+      <div id="resBusca" class="resbusca"></div>
+      <div class="ubnota">Toque el mapa para elegir otro punto. Su ubicación se usa solo en su teléfono o computadora para calcular los datos.</div></div>
+    <div id="mapaUb" class="mapaub"></div>
+  </div>
   <div id="hoy"></div>
   <div class="barra">
     <button id="ant" aria-label="Mes anterior">◀</button><h2 id="titMes"></h2><button id="sig" aria-label="Mes siguiente">▶</button>
     <button id="hoyBtn">Hoy</button>
     <div class="derecha">
-      <select id="lugar" aria-label="Lugar">
-        <option value="robore">Roboré</option><option value="santiago">Santiago de Chiquitos</option>
-        <option value="chochis">Chochís</option><option value="scz">Santa Cruz de la Sierra</option>
-      </select>
+
       <button id="imprimir">🖨 Imprimir mes</button>
     </div>
   </div>
@@ -189,10 +207,11 @@
 <footer><b>Elaborado por: Eder Santibáñez</b><br>
 Fuentes: algoritmos astronómicos de J. Meeus · SunCalc · Open-Meteo · NORAD/CelesTrak · Decretos Supremos 2750 y 5521<br>
 <small>Proyecto independiente, inspirado en los almanaques tradicionales como el Almanaque Bristol. No está afiliado a Lanman &amp; Kemp-Barclay &amp; Co. ni a sus marcas.</small></footer>
+<script src="lib/leaflet.js"></script>
 <script src="lib/suncalc.js"></script>
 <script src="lib/satellite.min.js"></script>
-<script src="santoral.js?v=202611201232"></script>
-<script src="siembra.js?v=202611201232"></script>
-<script src="almanaque.js?v=202611201232"></script>
+<script src="santoral.js?v=202611201306"></script>
+<script src="siembra.js?v=202611201306"></script>
+<script src="almanaque.js?v=202611201306"></script>
 </body>
 </html>

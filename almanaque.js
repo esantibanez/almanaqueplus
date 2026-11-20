@@ -365,7 +365,61 @@ document.getElementById("ant").onclick = () => { mes--; if (mes < 0) { mes = 11;
 document.getElementById("sig").onclick = () => { mes++; if (mes > 11) { mes = 0; anio++; } render(); };
 document.getElementById("hoyBtn").onclick = () => { anio = +fmt(new Date(), { year: "numeric" }); mes = +fmt(new Date(), { month: "numeric" }) - 1; render();
   document.querySelector(".hoy[data-d]")?.scrollIntoView({ behavior: "smooth", block: "center" }); };
-document.getElementById("lugar").onchange = e => { lugar = LUGARES[e.target.value]; document.getElementById("lugarTxt").textContent = lugar.nombre; actualizar(); };
+// ---- Ubicación: GPS del dispositivo, buscador, lugares frecuentes o clic en el mapa ----
+const mapaUb = L.map("mapaUb", { zoomControl: true, attributionControl: true }).setView([lugar.lat, lugar.lon], 9);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, attribution: "© Esri" }).addTo(mapaUb);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18 }).addTo(mapaUb);
+const marcaUb = L.marker([lugar.lat, lugar.lon]).addTo(mapaUb);
+let circuloUb = null;
+function guardarLugar() { try { localStorage.setItem("almanaquePlusLugar", JSON.stringify(lugar)); } catch (e) {} }
+async function nombreDe(lat, lon) {   // nombre del lugar a partir de las coordenadas
+  try {
+    const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`);
+    if (r.ok) { const j = await r.json(); const loc = j.locality || j.city || ""; const reg = [j.principalSubdivision, j.countryName].filter(Boolean).join(", ");
+      if (loc || reg) return { nombre: loc || reg, detalle: loc ? reg : "" }; }
+  } catch (e) {}
+  return { nombre: "Punto elegido", detalle: "" };
+}
+async function ponerLugar(l, opc = {}) {
+  lugar = { nombre: l.nombre, lat: l.lat, lon: l.lon, detalle: l.detalle || "" };
+  marcaUb.setLatLng([l.lat, l.lon]);
+  if (circuloUb) { mapaUb.removeLayer(circuloUb); circuloUb = null; }
+  if (opc.precision) circuloUb = L.circle([l.lat, l.lon], { radius: opc.precision, color: "#C77A0A", weight: 1, fillOpacity: 0.12 }).addTo(mapaUb);
+  mapaUb.setView([l.lat, l.lon], opc.zoom || 11);
+  document.getElementById("lugarNom").textContent = l.nombre;
+  document.getElementById("lugarTxt").textContent = l.nombre;
+  document.getElementById("lugarDet").textContent = [l.detalle, `${l.lat.toFixed(4)}, ${l.lon.toFixed(4)}`, opc.precision ? `precisión ± ${Math.round(opc.precision)} m` : ""].filter(Boolean).join(" · ");
+  guardarLugar(); climaLugar = null; clima = {};
+  await actualizar();
+}
+function usarGPS(silencioso) {
+  if (!navigator.geolocation) { if (!silencioso) alert("Este navegador no permite obtener la ubicación."); return; }
+  const b = document.getElementById("btnGeo"); b.textContent = "📍 Buscando…"; b.disabled = true;
+  navigator.geolocation.getCurrentPosition(async g => {
+    const lat = g.coords.latitude, lon = g.coords.longitude, n = await nombreDe(lat, lon);
+    b.textContent = "📍 Usar mi ubicación"; b.disabled = false;
+    await ponerLugar({ nombre: n.nombre, detalle: n.detalle ? `Su ubicación · ${n.detalle}` : "Su ubicación", lat, lon }, { precision: g.coords.accuracy, zoom: 13 });
+  }, e => {
+    b.textContent = "📍 Usar mi ubicación"; b.disabled = false;
+    if (!silencioso) alert(e.code === 1 ? "No dio permiso para usar su ubicación. Puede activarlo en el candado de la barra de direcciones, o buscar su ciudad." : "No se pudo obtener su ubicación. Intente de nuevo o busque su ciudad.");
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 });
+}
+document.getElementById("btnGeo").onclick = () => usarGPS(false);
+document.getElementById("lugar").onchange = e => { const l = LUGARES[e.target.value]; if (l) ponerLugar({ ...l, detalle: "Santa Cruz, Bolivia" }, { zoom: 11 }); e.target.value = ""; };
+mapaUb.on("click", async e => { const n = await nombreDe(e.latlng.lat, e.latlng.lng); ponerLugar({ nombre: n.nombre, detalle: n.detalle, lat: e.latlng.lat, lon: e.latlng.lng }, { zoom: mapaUb.getZoom() }); });
+document.getElementById("busca").onsubmit = async e => {
+  e.preventDefault();
+  const q = document.getElementById("buscaTxt").value.trim(), res = document.getElementById("resBusca");
+  if (!q) return; res.textContent = "Buscando…";
+  try {
+    const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=es`);
+    const j = await r.json(), L2 = (j.results || []).sort((a, b) => (b.country_code === "BO") - (a.country_code === "BO"));
+    if (!L2.length) { res.textContent = "No se encontró ese lugar."; return; }
+    res.innerHTML = L2.map((x, i) => `<div data-i="${i}">${x.name} <small>· ${[x.admin2, x.admin1, x.country].filter(Boolean).join(", ")}</small></div>`).join("");
+    res.querySelectorAll("div").forEach(el => el.onclick = () => { const x = L2[+el.dataset.i]; res.innerHTML = "";
+      ponerLugar({ nombre: x.name, detalle: [x.admin1, x.country].filter(Boolean).join(", "), lat: x.latitude, lon: x.longitude }, { zoom: 11 }); });
+  } catch (err) { res.textContent = "No se pudo buscar ahora. Intente de nuevo."; }
+};
 document.getElementById("imprimir").onclick = () => window.print();
 document.getElementById("cultivo").onchange = e => { cultivo = e.target.value; render(); };
 document.getElementById("actividad").onchange = e => { actividad = e.target.value; render(); };
@@ -374,4 +428,13 @@ document.getElementById("vCal").onclick = () => { vista = "cal"; render(); };
 document.getElementById("vLista").onclick = () => { vista = "lista"; render(); };
 document.getElementById("ficha").onclick = e => { if (e.target.id === "ficha") cerrarFicha(); };
 document.addEventListener("keydown", e => { if (e.key === "Escape") cerrarFicha(); });
-(async () => { render(); await Promise.all([cargarClima(), cargarOrbitas()]); render(); })();
+(async () => {
+  let guardado = null; try { guardado = JSON.parse(localStorage.getItem("almanaquePlusLugar")); } catch (e) {}
+  if (guardado && isFinite(guardado.lat)) { lugar = guardado; }
+  document.getElementById("lugarNom").textContent = lugar.nombre; document.getElementById("lugarTxt").textContent = lugar.nombre;
+  document.getElementById("lugarDet").textContent = [lugar.detalle, `${lugar.lat.toFixed(4)}, ${lugar.lon.toFixed(4)}`].filter(Boolean).join(" · ");
+  marcaUb.setLatLng([lugar.lat, lugar.lon]); mapaUb.setView([lugar.lat, lugar.lon], 11);
+  render(); await Promise.all([cargarClima(), cargarOrbitas()]); render();
+  // primera visita: pedir la ubicación del dispositivo (si la niega, queda Roboré)
+  if (!guardado) usarGPS(true);
+})();
