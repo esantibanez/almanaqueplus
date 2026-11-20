@@ -1,7 +1,22 @@
-/* Instalación como aplicación y aviso de versión nueva */
+/* Instalación como aplicación, aviso de versión nueva y ajustes de lectura (tamaño de letra y estilo) */
 "use strict";
 (() => {
   const $ = id => document.getElementById(id);
+  // ---- Ajustes de lectura
+  const raiz = document.documentElement;
+  const marcar = () => {
+    document.querySelectorAll(".ajustes [data-tam]").forEach(b => b.classList.toggle("act", b.dataset.tam === raiz.dataset.tam));
+    document.querySelectorAll(".ajustes [data-tema]").forEach(b => b.classList.toggle("act", b.dataset.tema === raiz.dataset.tema));
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = raiz.dataset.tema === "oscuro" ? "#c47f12" : "#F4A21E";
+  };
+  const poner = (k, v) => { raiz.dataset[k] = v; try { localStorage.setItem(k === "tam" ? "almanaquePlusTam" : "almanaquePlusTema", v); } catch (e) {} marcar();
+    if (typeof mapaUb !== "undefined") setTimeout(() => mapaUb.invalidateSize(), 50); };
+  const iniciarAjustes = () => {
+    document.querySelectorAll(".ajustes [data-tam]").forEach(b => b.onclick = () => poner("tam", b.dataset.tam));
+    document.querySelectorAll(".ajustes [data-tema]").forEach(b => b.onclick = () => poner("tema", b.dataset.tema));
+    marcar();
+  };
+  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", iniciarAjustes) : iniciarAjustes();
   const instalada = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const leer = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };

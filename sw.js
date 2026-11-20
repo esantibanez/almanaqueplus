@@ -1,6 +1,6 @@
 /* Almanaque Plus — service worker: funciona sin internet y avisa cuando hay versión nueva.
    VERSION se cambia en cada publicación; eso hace que los teléfonos detecten la actualización. */
-const VERSION = "202611201532";
+const VERSION = "202611201540";
 const CACHE = "almanaque-plus-" + VERSION;
 const BASE = [
   "./", "index.html", "pwa.js", "almanaque.js", "siembra.js", "santoral.js", "manifest.webmanifest",
@@ -10,6 +10,7 @@ const BASE = [
   "lib/fonts/playfair-display-latin-900-normal.woff2", "lib/fonts/playfair-display-latin-400-italic.woff2",
   "lib/fonts/old-standard-tt-latin-400-normal.woff2", "lib/fonts/old-standard-tt-latin-700-normal.woff2",
   "lib/fonts/old-standard-tt-latin-400-italic.woff2", "tles.txt",
+  "lib/fonts/source-sans-3-latin-400-normal.woff2", "lib/fonts/source-sans-3-latin-700-normal.woff2", "lib/fonts/source-sans-3-latin-400-italic.woff2",
 ];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE.map(u => new Request(u, { cache: "reload" })))));
