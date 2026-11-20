@@ -76,7 +76,7 @@
 
   .huerta { background:var(--papel); border:1px solid #d9cfb2; border-radius:6px; padding:10px 12px; margin:0 0 12px; }
   .hsel { display:flex; flex-wrap:wrap; gap:10px; align-items:center; } .hsel b { color:var(--verde); font-size:16px; }
-  .vistas { margin-left:auto; } .vistas button { margin-left:4px; } button.act { background:var(--tinta); color:var(--naranja); }
+  .vistas { margin-left:6px; display:inline-flex; } .vistas button { margin-left:4px; } button.act { background:var(--tinta); color:var(--naranja); }
   .leyenda { margin:8px 0 2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12.5px; } .leyenda small { color:var(--gris); }
   .humedad { margin-top:8px; padding-top:8px; border-top:1px dashed #d9cfb2; font-size:13.5px; } .humedad b { color:var(--verde); }
   .hum { display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:4px; align-items:center; }
@@ -132,7 +132,23 @@
   .ldias { font-weight:bold; white-space:nowrap; }
   .glab { font-size:13px; letter-spacing:1px; line-height:1.1; margin-bottom:2px; }
   .flun ul { margin:4px 0; padding-left:18px; font-size:13px; } .flun li.mio { background:#FDE7BF; }
+  .barra h2.largo { font-size:21px; text-transform:none; letter-spacing:0; }
+  .barra h2.largo::first-letter { text-transform:uppercase; }
+  .vistas button { border-radius:0; margin:0 !important; } .vistas button:first-child { border-radius:5px 0 0 5px; } .vistas button:last-child { border-radius:0 5px 5px 0; }
+  .vdia { background:var(--papel); border:1px solid var(--tinta); border-radius:6px; padding:14px 18px; outline:1px solid var(--tinta); outline-offset:-5px; }
+  .vdia .rec { max-width:none; }
+  .vsem { display:grid; grid-template-columns:repeat(7, 1fr); gap:5px; }
+  .sdia { background:var(--papel); border:1px solid #d9cba4; border-radius:6px; padding:6px 7px; font-size:12.5px; cursor:pointer; display:flex; flex-direction:column; gap:3px; }
+  .sdia:hover, .sdia:focus { box-shadow:0 0 0 2px var(--naranja); outline:none; }
+  .sdia.fer { background:#FBE9D2; } .sdia.hoy { border:2px solid var(--tinta); box-shadow:0 0 0 3px var(--naranja); }
+  .scab { display:flex; align-items:baseline; gap:5px; border-bottom:1px solid #d9cba4; padding-bottom:3px; }
+  .sdow { text-transform:uppercase; font-size:10.5px; letter-spacing:1px; color:var(--gris); } .snum { font:700 24px "Playfair", Georgia, serif; margin-left:auto; }
+  .sdia.dom .snum, .sdia.fer .snum, .sdia.dom .sdow { color:var(--rojo); } .smes { font-size:11px; color:var(--gris); }
+  .ssanto { font-style:italic; font-size:12.5px; line-height:1.2; } .sfila svg { vertical-align:middle; } .sgris { color:#aaa; } .ssat { color:#1b4f72; font-size:11.5px; }
+  .slab { display:inline-block; background:#FDE7BF; border-radius:8px; padding:0 5px; margin:1px 2px 0 0; font-size:11px; }
+  .srec { margin-top:auto; padding-top:4px; }
   @media (max-width:720px) {
+    .vsem { grid-template-columns:1fr; } .sdia { font-size:13.5px; } .barra h2.largo { font-size:17px; } .vdia { padding:10px; }
     .glab { font-size:10px; letter-spacing:0; } .ltab { min-width:100%; }
     .ubic { flex-direction:column; } .mapaub { width:100%; height:190px; } .busca input { width:160px; }
     .gdia { min-height:78px; padding:2px 3px 0; } .gnum { font-size:15px; } .gcli span, .gfer, .gico { display:none; } .glun svg { width:12px; height:12px; }
@@ -174,8 +190,9 @@
   </div>
   <div id="hoy"></div>
   <div class="barra">
-    <button id="ant" aria-label="Mes anterior">◀</button><h2 id="titMes"></h2><button id="sig" aria-label="Mes siguiente">▶</button>
+    <button id="ant" aria-label="Día anterior">◀</button><h2 id="titMes"></h2><button id="sig" aria-label="Día siguiente">▶</button>
     <button id="hoyBtn">Hoy</button>
+    <span class="vistas"><button id="v_dia" class="act">Día</button><button id="v_semana">Semana</button><button id="v_mes">Mes</button><button id="v_lista">📋 Lista</button></span>
     <div class="derecha">
 
       <button id="imprimir">🖨 Imprimir mes</button>
@@ -196,7 +213,6 @@
         <option value="platano">Plátano</option><option value="citricos">Cítricos</option></select></label>
       <label>Actividad <select id="actividad"><option value="siembra">Siembra</option><option value="poda">Poda</option><option value="riego">Riego</option></select></label>
       <label class="chk"><input type="checkbox" id="verLuna" checked> Mostrar la tradición lunar</label>
-      <span class="vistas"><button id="vCal" class="act">📅 Calendario</button><button id="vLista">📋 Lista</button></span>
     </div>
     <div class="leyenda"><span class="chip e-bien">Buen momento</span><span class="chip e-posible">Posible</span><span class="chip e-no">No conviene</span>
       <span class="chip e-regar">Regar</span><span class="chip e-fuera">Fuera de época / no hace falta</span><span class="chip e-na">No aplica</span><span class="chip trad">🌙 luna favorable (tradición)</span>
@@ -228,8 +244,8 @@ Fuentes: algoritmos astronómicos de J. Meeus · SunCalc · Open-Meteo · NORAD/
 <script src="lib/leaflet.js"></script>
 <script src="lib/suncalc.js"></script>
 <script src="lib/satellite.min.js"></script>
-<script src="santoral.js?v=202611201431"></script>
-<script src="siembra.js?v=202611201431"></script>
-<script src="almanaque.js?v=202611201431"></script>
+<script src="santoral.js?v=202611201439"></script>
+<script src="siembra.js?v=202611201439"></script>
+<script src="almanaque.js?v=202611201439"></script>
 </body>
 </html>
