@@ -1,6 +1,6 @@
 /* Almanaque Plus — service worker: funciona sin internet y avisa cuando hay versión nueva.
    VERSION se cambia en cada publicación; eso hace que los teléfonos detecten la actualización. */
-const VERSION = "202611201605";
+const VERSION = "202611201611";
 const CACHE = "almanaque-plus-" + VERSION;
 const BASE = [
   "./", "index.html", "pwa.js", "campo.js", "almanaque.js", "siembra.js", "santoral.js", "manifest.webmanifest",
@@ -13,8 +13,8 @@ const BASE = [
   "lib/fonts/source-sans-3-latin-400-normal.woff2", "lib/fonts/source-sans-3-latin-700-normal.woff2", "lib/fonts/source-sans-3-latin-400-italic.woff2",
 ];
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE.map(u => new Request(u, { cache: "reload" })))));
-  // no se activa solo: espera a que la persona toque "Actualizar"
+  // se activa sola apenas termina de bajar: la página se recarga con la edición nueva
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("almanaque-plus-") && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
