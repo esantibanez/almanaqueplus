@@ -483,7 +483,7 @@ function fichaHTML(x, modal) {
         + (it ? `<div class="fbloque"><b>🐄 Calor para el ganado</b> <span class="chip ith${it.n}">${it.tit} (${it.v})</span></div>` : "")
         + (ev.length ? `<div class="fbloque"><b>📒 Mi cuaderno</b>${ev.map(v => `<div>${v.ico} ${v.txt}${v.fin ? " (último día estimado)" : ""}: ${CULTIVOS[v.e.cultivo].nombre}${v.e.parcela ? `, ${v.e.parcela}` : ""}</div>`).join("")}</div>` : "");
     })()}
-    <div class="fbloque"><button class="binfo" onclick="info(${x.d})">ⓘ ¿De dónde salen estos datos?</button> <button class="binfo" onclick="leerFicha()">🔊 Leer en voz alta</button></div>
+    <div class="fbloque"><button class="binfo" onclick="info(${x.d})">ⓘ ¿De dónde salen estos datos?</button> <button class="binfo bvoz" onclick="leerFicha()">${leyendo ? "⏹️ Detener lectura" : "🔊 Leer en voz alta"}</button></div>
     <div class="fbloque"><b>🛰️ Satélites</b> ${x.pas.length ? x.pas.map(p => `${p.s.nombre} a las ${hora(p.t)}`).join(" · ") : "Ninguna pasada de Landsat o Sentinel-2 sobre el lugar."}</div>`;
 }
 function ficha(d) { document.getElementById("fichaCont").innerHTML = fichaHTML(diasMes[d - 1], true); document.getElementById("ficha").classList.add("on"); }
@@ -528,7 +528,7 @@ function infoHTML(x) {
     </dl>`;
 }
 function info(d) { document.getElementById("fichaCont").innerHTML = infoHTML(d ? diasMes[d - 1] : null); document.getElementById("ficha").classList.add("on"); }
-function cerrarFicha() { document.getElementById("ficha").classList.remove("on"); }
+function cerrarFicha() { if (typeof leyendo !== "undefined" && leyendo) detenerLectura(); document.getElementById("ficha").classList.remove("on"); }
 // ---- ¿Hay humedad para sembrar? ------------------------------------------------------
 function renderHumedad() {
   const el = document.getElementById("humedad"), h = hoyISO(), c = clima[h];

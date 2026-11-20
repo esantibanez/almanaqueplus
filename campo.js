@@ -216,7 +216,7 @@ function renderCampo() {
   const fh = ventanasFumigar(h, tipoOrg, +fmt(new Date(), { hour: "numeric", hour12: false })), fm = ventanasFumigar(m, tipoOrg), P = ORGANICOS[tipoOrg];
   const dFum = (r, cuando) => !r ? "" : r.vent.length ? `<div class="fum ok">✅ <b>${cuando}:</b> de ${txtVent(r.vent)}</div>`
     : `<div class="fum no">⛔ <b>${cuando}:</b> ${cuando === "Hoy" && !r.fallas.length ? "ya no quedan horas buenas" : "sin un buen momento"}${r.fallas.length ? ` (${r.fallas.slice(0, 2).join("; ")})` : ""}</div>`;
-  el.innerHTML = `<div class="ctit">⚠️ Hoy en el campo · ${lugar.nombre} <button class="voz" onclick="leerCampo()" title="Leer en voz alta">🔊</button></div>
+  el.innerHTML = `<div class="ctit">⚠️ Hoy en el campo · ${lugar.nombre} <button class="voz" onclick="leerCampo()" title="Leer en voz alta">${leyendo ? "⏹️" : "🔊"}</button></div>
     <div class="cgrid">
       <div class="cbox"><div class="cbt">Alertas de clima (7 días)</div>${alHtml}</div>
       <div class="cbox"><div class="cbt">🌿 ¿Se puede fumigar? · productos orgánicos</div>
@@ -232,15 +232,40 @@ function renderCampo() {
 }
 
 // ---- Lectura en voz alta ------------------------------------------------------------------
+let leyendo = false, vozLatina = null;
+const PREF_VOZ = ["es-BO", "es-419", "es-MX", "es-US", "es-AR", "es-CO", "es-PE", "es-CL", "es-EC", "es-PY", "es-UY", "es-VE"];
+function elegirVoz() {   // primero español latinoamericano; el de España solo si no hay otro
+  const vs = ("speechSynthesis" in window) ? speechSynthesis.getVoices().filter(v => /^es/i.test(v.lang)) : [];
+  const n = l => l.replace("_", "-").toLowerCase();
+  for (const p of PREF_VOZ) { const v = vs.find(v => n(v.lang) === p.toLowerCase()); if (v) return v; }
+  return vs.find(v => !/es-es/i.test(n(v.lang))) || vs[0] || null;
+}
+if ("speechSynthesis" in window) { vozLatina = elegirVoz(); speechSynthesis.addEventListener?.("voiceschanged", () => { vozLatina = elegirVoz(); }); }
+function actualizarBotonesVoz() {
+  document.querySelectorAll(".bvoz").forEach(b => b.textContent = leyendo ? "⏹️ Detener lectura" : "🔊 Leer en voz alta");
+  document.querySelectorAll(".voz").forEach(b => b.textContent = leyendo ? "⏹️" : "🔊");
+}
+function detenerLectura() { leyendo = false; speechSynthesis.cancel(); actualizarBotonesVoz(); }
 function leer(texto) {
   if (!("speechSynthesis" in window)) { alert("Este teléfono no tiene lectura en voz alta."); return; }
-  if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; }   // tocar de nuevo = detener
-  const limpio = texto.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, " ").replace(/°/g, " grados").replace(/ km\/h/g, " kilómetros por hora")
-    .replace(/ mm\b/g, " milímetros").replace(/(\d+) %/g, "$1 por ciento").replace(/\s+/g, " ");
-  const u = new SpeechSynthesisUtterance(limpio), voces = speechSynthesis.getVoices();
-  u.voice = voces.find(v => /es[-_](BO|AR|PE|CL|MX|US|419)/i.test(v.lang)) || voces.find(v => v.lang.startsWith("es")) || null;
-  u.lang = u.voice ? u.voice.lang : "es-ES"; u.rate = 0.95;
-  speechSynthesis.speak(u);
+  // tocar de nuevo = detener (nunca dos voces a la vez)
+  if (leyendo || speechSynthesis.speaking || speechSynthesis.pending) { detenerLectura(); return; }
+  speechSynthesis.cancel();
+  if (!vozLatina) vozLatina = elegirVoz();
+  // cada renglón se lee por separado, con una pausa entre ellos
+  const renglones = texto.split(/\n+/).map(t => t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B50}\u{2B55}\u{24D8}]/gu, " ")
+    .replace(/°/g, " grados").replace(/ km\/h/g, " kilómetros por hora").replace(/ mm\b/g, " milímetros")
+    .replace(/(\d+) ?%/g, "$1 por ciento").replace(/\s*·\s*/g, ", ").replace(/\s+/g, " ").trim())
+    .filter(t => /[\p{L}\d]/u.test(t));
+  if (!renglones.length) return;
+  leyendo = true; actualizarBotonesVoz();
+  renglones.forEach((t, k) => {
+    const u = new SpeechSynthesisUtterance(/[.:;!?]$/.test(t) ? t : t + ".");
+    if (vozLatina) { u.voice = vozLatina; u.lang = vozLatina.lang; } else u.lang = "es-419";
+    u.rate = 0.95;
+    if (k === renglones.length - 1) u.onend = u.onerror = () => { leyendo = false; actualizarBotonesVoz(); };
+    speechSynthesis.speak(u);
+  });
 }
 const leerCampo = () => leer(document.getElementById("hoy").innerText + ". " + document.getElementById("campo").innerText);
 const leerFicha = () => leer(document.getElementById("fichaCont").innerText);

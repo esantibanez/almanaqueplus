@@ -1,6 +1,6 @@
 /* Almanaque Plus — service worker: funciona sin internet y avisa cuando hay versión nueva.
    VERSION se cambia en cada publicación; eso hace que los teléfonos detecten la actualización. */
-const VERSION = "202611201611";
+const VERSION = "202611201630";
 const CACHE = "almanaque-plus-" + VERSION;
 const BASE = [
   "./", "index.html", "pwa.js", "campo.js", "almanaque.js", "siembra.js", "santoral.js", "manifest.webmanifest",
