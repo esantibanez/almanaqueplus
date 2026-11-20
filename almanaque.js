@@ -289,7 +289,7 @@ function armarDia(a, m, d) {
   x.a = a; x.m = m; x.iso = iso; x.k = k; x.hoy = k === claveDia(new Date()); x.cl = clima[iso]; x.fz = M.faseDia[k]; x.pas = M.pas[k] || [];
   x.dom = fmt(x.f, { weekday: "long" }) === "domingo"; x.fer = x.marcas.some(z => z.tipo === "feriado");
   x.edad = SunCalc.getMoonIllumination(diaBo(a, m, d, 12)).phase;
-  x.rec = recomendar(cultivo, actividad, iso, clima, hoyISO(), { cre: x.cre, frac: x.il.fraction, edad: x.edad });
+  x.rec = recomendarSel(cultivo, actividad, iso, clima, hoyISO(), { cre: x.cre, frac: x.il.fraction, edad: x.edad });
   x.trad = LABORES.filter(L => enVentana(x.edad, L));
   return x;
 }
@@ -345,7 +345,7 @@ function resumen(dias) {
   // recomendación del cultivo: días por estado
   const cuenta = {}; dias.forEach(x => { cuenta[x.rec.estado] = (cuenta[x.rec.estado] || 0) + 1; });
   const orden = ["bien", "regar", "posible", "ligero", "no", "fuera", "na", "sd"].filter(e => cuenta[e]);
-  h.push(`<div class="rfila rrec"><span class="rlab">${CULTIVOS[cultivo].nombre} · ${ACTIVIDADES[actividad].toLowerCase()}:</span> ${orden.map(e =>
+  h.push(`<div class="rfila rrec"><span class="rlab">${nombreSel(cultivo)} · ${ACTIVIDADES[actividad].toLowerCase()}:</span> ${orden.map(e =>
     `<span class="chip e-${e}">${NOM_EST[e]}${cuenta[e] === dias.length ? "" : ` · ${cuenta[e]} d`}</span>`).join(" ")}</div>`);
   // lluvia y satélites
   const conClima = dias.filter(x => x.cl);
@@ -372,14 +372,25 @@ function renderSemanas() {
 }
 // ---- Meses del año ------------------------------------------------------------------------
 function renderMeses() {
-  const todos = diasDelAnio(anio), est = estaciones(anio), C = CULTIVOS[cultivo];
+  const todos = diasDelAnio(anio), est = estaciones(anio), C = { nombre: nombreSel(cultivo) };
   document.getElementById("vista").innerHTML = `<div class="vanual vmeses">${NOMBRE_MES.map((nom, m) => {
     const dias = todos.filter(x => x.m === m), hoy = dias.some(x => x.hoy);
     const e = est.find(z => claveDia(z.t).endsWith(`/${String(m + 1).padStart(2, "0")}/${anio}`));
+    // época del mes para el cultivo (o para cada cultivo del grupo)
+    const epocaDe = id => {
+      const K = CULTIVOS[id], acts = actividad === "siembra" ? K.siembra : actividad === "trasplante" ? K.trasplante : null;
+      if (actividad === "riego") return ["fuera", "Riego según la lluvia de cada día"];
+      if (actividad === "poda") return !K.poda ? ["na", "No se poda"] : K.poda.meses.includes(m + 1) ? ["bien", "Época de poda"] : ["fuera", "Fuera de época de poda"];
+      if (!acts) return ["na", actividad === "siembra" ? "Se propaga por hijuelos" : "No se trasplanta"];
+      const pal = actividad === "siembra" ? "siembra" : "trasplante";
+      return acts.principal.includes(m + 1) ? ["bien", `Época principal de ${pal}`] : acts.secundaria.includes(m + 1) ? ["posible", `${pal[0].toUpperCase() + pal.slice(1)} posible${(acts.conRiego || []).includes(m + 1) ? " con riego" : ""}`] : ["fuera", `Fuera de época de ${pal}`];
+    };
     let epoca = "";
-    if (actividad === "siembra") { const S = C.siembra; epoca = S.principal.includes(m + 1) ? `<span class="chip e-bien">Época principal de siembra</span>` : S.secundaria.includes(m + 1) ? `<span class="chip e-posible">Siembra posible${(S.conRiego || []).includes(m + 1) ? " con riego" : ""}</span>` : `<span class="chip e-fuera">Fuera de época de siembra</span>`; }
-    else if (actividad === "poda") epoca = !C.poda ? `<span class="chip e-na">${C.podaNota.split(".")[0]}</span>` : C.poda.meses.includes(m + 1) ? `<span class="chip e-bien">Época de poda</span>` : `<span class="chip e-fuera">Fuera de época de poda</span>`;
-    else epoca = `<span class="chip e-fuera">Riego: depende de la lluvia de cada día</span>`;
+    if (!esGrupo(cultivo)) { const [e, t] = epocaDe(cultivo); epoca = `<span class="chip e-${e}">${t}</span>`; }
+    else {
+      const por = {}; idsDe(cultivo).forEach(id => { const [e, t] = epocaDe(id); (por[t] = por[t] || { e, ids: [] }).ids.push(CULTIVOS[id].nombre); });
+      epoca = Object.entries(por).sort((a, b) => PRIOR.indexOf(a[1].e) - PRIOR.indexOf(b[1].e)).map(([t, o]) => `<div><span class="chip e-${o.e}">${t}</span> <small>${o.ids.join(", ")}</small></div>`).join("");
+    }
     return `<div class="tarj ${hoy ? "hoy" : ""}" data-m="${m}" tabindex="0" role="button">
       <div class="tcab"><span class="tmes">${nom}</span></div>
       <div class="rfila"><span class="rlab">${C.nombre}:</span> ${epoca}</div>
@@ -410,7 +421,7 @@ function renderCal() {
 }
 function renderLista() {
   let html = `<table><thead><tr><th>Día</th><th>Santoral y fechas</th><th>☀️ Sol<br><small>sale / se pone</small></th><th>🌙 Luna</th><th class="cli">Clima</th>
-    <th>${CULTIVOS[cultivo].nombre} · ${ACTIVIDADES[actividad].toLowerCase()}</th><th class="sat">🛰️ Satélites</th></tr></thead><tbody>`;
+    <th>${nombreSel(cultivo)} · ${ACTIVIDADES[actividad].toLowerCase()}</th><th class="sat">🛰️ Satélites</th></tr></thead><tbody>`;
   for (const x of diasMes) {
     const cl = x.cl, fz = x.fz;
     html += `<tr class="${x.dom ? "dom" : ""} ${x.fer ? "fer" : ""} ${x.hoy ? "hoy" : ""}" data-d="${x.d}">
@@ -429,10 +440,10 @@ function renderLista() {
 }
 // ---- Ficha completa de un día -----------------------------------------------------
 function fichaHTML(x, modal) {
-  const d = x.d, cl = x.cl, R = x.rec, C = CULTIVOS[cultivo];
+  const d = x.d, cl = x.cl, R = x.rec, C = { nombre: nombreSel(cultivo) };
   const certeza = R.certeza ? `<span class="nivel n${R.certeza.n}">Certeza ${NIV[R.certeza.n].toLowerCase()}</span> <small>${R.certeza.txt}</small>` : "";
   const otras = Object.keys(ACTIVIDADES).filter(a => a !== actividad).map(a => {
-    const o = recomendar(cultivo, a, x.iso, clima, hoyISO(), { cre: x.cre, frac: x.il.fraction, edad: x.edad });
+    const o = recomendarSel(cultivo, a, x.iso, clima, hoyISO(), { cre: x.cre, frac: x.il.fraction, edad: x.edad });
     return `<div class="otra"><b>${ACTIVIDADES[a]}:</b> <span class="chip e-${o.estado}">${o.corto}</span> ${o.titulo}</div>`; }).join("");
   return `
     <div class="fcab"><div><div class="hd">${fmt(x.f, { weekday: "long" })}</div><div class="fn">${d} de ${NOMBRE_MES[x.m].toLowerCase()} de ${x.a}</div></div>
@@ -560,8 +571,8 @@ document.getElementById("busca").onsubmit = async e => {
 };
 document.getElementById("imprimir").onclick = () => window.print();
 (() => { const sel = document.getElementById("cultivo");
-  sel.innerHTML = GRUPOS.map(([g, ids]) => `<optgroup label="${g}">${ids.map(id => `<option value="${id}">${CULTIVOS[id].nombre}</option>`).join("")}</optgroup>`).join("");
-  try { const c = localStorage.getItem("almanaquePlusCultivo"); if (c && CULTIVOS[c]) cultivo = c; } catch (e) {}
+  sel.innerHTML = GRUPOS.map(([g, ids], i) => `<optgroup label="${g}"><option value="g:${i}">▸ Todo el grupo: ${g.split(" (")[0].toLowerCase()}</option>${ids.map(id => `<option value="${id}">${CULTIVOS[id].nombre}</option>`).join("")}</optgroup>`).join("");
+  try { const c = localStorage.getItem("almanaquePlusCultivo"); if (c && (CULTIVOS[c] || (esGrupo(c) && GRUPOS[+c.slice(2)]))) cultivo = c; } catch (e) {}
   sel.value = cultivo; })();
 document.getElementById("cultivo").onchange = e => { cultivo = e.target.value; try { localStorage.setItem("almanaquePlusCultivo", cultivo); } catch (er) {} render(); };
 document.getElementById("actividad").onchange = e => { actividad = e.target.value; render(); };

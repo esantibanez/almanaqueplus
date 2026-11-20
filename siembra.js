@@ -115,6 +115,32 @@ const CULTIVOS = {
   camote: mk("raiz", { nombre: "Camote", siembra: { principal: [10, 11, 12], secundaria: [1, 2, 3], nota: "Se planta por guías (trozos de tallo) con el suelo húmedo." } }),
   walusa: mk("raiz", { nombre: "Walusa (gualusa)", kc: 1.0, siembra: { principal: [10, 11, 12], secundaria: [1, 2], nota: "Necesita suelo húmedo y algo de sombra; se planta por cormos (hijuelos)." } }),
 };
+// ---- Trasplante: cómo se establece cada cultivo ------------------------------------------
+const corre = (meses, n) => [...new Set(meses.map(m => ((m - 1 + n + 12) % 12) + 1))];
+const ALMACIGO = ["tomate", "pimenton", "aji", "lechuga", "cebolla", "repollo"];
+const VIVERO = ["naranja", "mandarina", "toronja", "pomelo", "lima", "limon", "palta", "lucuma", "maracuya", "cayu", "piton", "guapuru", "acerola", "pitanga", "carambola", "mango", "guayaba", "achachairu", "tamarindo", "papaya"];
+const HIJUELO = ["platano", "guineo", "pina"];
+const CITRICOS = ["naranja", "mandarina", "toronja", "pomelo", "lima", "limon"];
+for (const [id, C] of Object.entries(CULTIVOS)) {
+  if (ALMACIGO.includes(id)) {
+    C.trasplante = Object.assign({}, C.siembra, { nota: `Trasplante del plantín al terreno cuando tiene 4 a 6 hojas verdaderas, unas 4 a 6 semanas después de la siembra en almácigo. ${C.siembra.nota}` });
+    C.siembra = { principal: corre(C.siembra.principal, -1), secundaria: corre(C.siembra.secundaria, -1).filter(m => !corre(C.siembra.principal, -1).includes(m)),
+      vivero: true, fuente: C.siembra.fuente, nota: "Siembra de la semilla en almácigo (cajón o platabanda protegida), unas 4 a 6 semanas antes del trasplante." };
+  } else if (VIVERO.includes(id)) {
+    C.trasplante = Object.assign({}, C.siembra, { nota: `Plantación del plantín en el terreno definitivo. ${C.siembra.nota}` });
+    C.siembra = id === "papaya"
+      ? { principal: corre(C.siembra.principal, -2), secundaria: corre(C.siembra.secundaria, -2), vivero: true, fuente: C.siembra.fuente, nota: "Siembra de la semilla en bolsas o semillero, unas 6 a 8 semanas antes del trasplante." }
+      : { principal: [], secundaria: TODO, vivero: true, nota: `Siembra de la semilla en vivero o bolsas, con sombra y riego: se puede todo el año. El plantín tarda varios meses en estar listo${CITRICOS.includes(id) ? "; los cítricos, además, se injertan sobre un patrón resistente antes de llevarlos al terreno" : ""}.` };
+  } else if (HIJUELO.includes(id)) {
+    C.trasplante = Object.assign({}, C.siembra);
+    C.siembra = null; C.siembraNota = `${C.nombre}: se propaga por hijuelos${id === "pina" ? " o coronas" : ""}, no por semilla. Vea la actividad Trasplante.`;
+  } else {
+    C.trasplante = null;
+    C.trasplanteNota = C.raiz && ["yuca", "camote", "walusa"].includes(id)
+      ? `${C.nombre}: se planta directo en el terreno (por ${id === "yuca" ? "estacas" : id === "camote" ? "guías" : "cormos"}); no se trasplanta. Vea la actividad Siembra.`
+      : `${C.nombre}: se siembra directo en el terreno; no se trasplanta.`;
+  }
+}
 const GRUPOS = [
   ["Granos y legumbres", ["maiz", "frejol", "arroz", "mani"]],
   ["Hortalizas", ["tomate", "zanahoria", "remolacha", "lechuga", "rabano", "pimenton", "aji", "pepino", "cebolla", "repollo"]],
@@ -124,7 +150,7 @@ const GRUPOS = [
   ["Cucurbitáceas (zapallos y sandías)", ["sandia", "melon", "joco"]],
   ["Raíces y tubérculos", ["yuca", "camote", "walusa"]],
 ];
-const ACTIVIDADES = { siembra: "Siembra", poda: "Poda", riego: "Riego" };
+const ACTIVIDADES = { siembra: "Siembra", trasplante: "Trasplante", poda: "Poda", riego: "Riego" };
 const NIVEL = ["Baja", "Media", "Alta"];
 
 // ---- utilidades de datos ----------------------------------------------------------------
@@ -151,7 +177,10 @@ function recomendar(cultivoId, actividad, iso, clima, hoyISO, luna) {
 
   // tradición lunar (aparte; no cambia la recomendación técnica): mismas ventanas que el calendario lunar tradicional
   const ventana = id => LABORES.find(L => L.id === id), dentro = id => luna.edad != null && enVentana(luna.edad, ventana(id));
-  if (actividad === "siembra") {
+  if (actividad === "trasplante") {
+    const fav = dentro("trasplantar");
+    r.tradicion = { fav, txt: `La tradición aconseja trasplantar en cuarto creciente, cuando "sube la savia". ${fav ? "Este día cae en esa ventana: favorable" : "Este día no cae en esa ventana: no favorable"} según la costumbre.` };
+  } else if (actividad === "siembra") {
     const id = C.raiz ? "raiz" : "altura", L = ventana(id), fav = dentro(id);
     r.tradicion = { fav, txt: `La tradición aconseja sembrar ${C.raiz ? "raíces y tubérculos" : "lo que da fruto sobre la tierra"} en ${L.fase}. ${fav ? "Este día cae en esa ventana: favorable" : "Este día no cae en esa ventana: no favorable"} según la costumbre.` };
   } else if (actividad === "poda" && C.poda) {
@@ -159,28 +188,40 @@ function recomendar(cultivoId, actividad, iso, clima, hoyISO, luna) {
     r.tradicion = { fav, txt: `La tradición aconseja podar en cuarto menguante, cuando "baja la savia". ${fav ? "Este día cae en esa ventana: favorable" : "Este día no cae en esa ventana: no favorable"} según la costumbre.` };
   }
 
-  if (actividad === "siembra") {
-    const S = C.siembra, enPrin = S.principal.includes(mes), enSec = S.secundaria.includes(mes), conRiego = (S.conRiego || []).includes(mes);
+  if (actividad === "siembra" || actividad === "trasplante") {
+    const S = actividad === "siembra" ? C.siembra : C.trasplante, tras = actividad === "trasplante";
+    const P = tras ? { sust: "trasplante", inf: "trasplantar", Inf: "Trasplantar", Sust: "Trasplante" } : { sust: "siembra", inf: "sembrar", Inf: "Sembrar", Sust: "Siembra" };
+    if (!S) { r.estado = "na"; r.corto = "No aplica"; r.titulo = (tras ? C.trasplanteNota : C.siembraNota).split(":").slice(1).join(":").trim().replace(/^./, x => x.toUpperCase());
+      r.razones.push({ t: tras ? C.trasplanteNota : C.siembraNota, f: "Manejo del cultivo", n: 2 }); r.certeza = { n: 2, txt: "práctica del cultivo" }; r.tradicion = null; return r; }
+    const enPrin = S.principal.includes(mes), enSec = S.secundaria.includes(mes), conRiego = (S.conRiego || []).includes(mes);
     const fu = S.fuente ? S.fuente.corto : "Guía general, por verificar", url = S.fuente ? S.fuente.url : null, nCal = S.fuente ? 1 : 0;
     const txtCal = S.fuente ? "calendario con fuente" : "guía general por verificar";
-    r.razones.push({ t: enPrin ? `Mes de siembra principal de ${C.nombre.toLowerCase()} en Santa Cruz.` : enSec ? `Mes de siembra posible (secundario)${conRiego ? ", solo con riego" : ""}.` : "Fuera de la época habitual de siembra.", f: fu, url, n: nCal });
+    r.razones.push({ t: enPrin ? `Mes principal de ${P.sust} de ${C.nombre.toLowerCase()} en Santa Cruz.` : enSec ? `Mes de ${P.sust} posible${S.vivero ? " (en vivero o almácigo)" : " (secundario)"}${conRiego ? ", solo con riego" : ""}.` : `Fuera de la época habitual de ${P.sust}.`, f: fu, url, n: nCal });
     r.razones.push({ t: S.nota, f: fu, url, n: nCal, nota: true });
     if (!S.fuente) r.razones.push({ t: "Estos meses no tienen todavía una fuente publicada para la Chiquitanía: conviene confirmarlos con productores de la zona.", f: "Aviso", n: 0, nota: true });
-    if (!enPrin && !enSec) { r.estado = "fuera"; r.corto = "Fuera de época"; r.titulo = "No es época de siembra"; r.certeza = { n: nCal, txt: txtCal }; return r; }
+    if (!enPrin && !enSec) { r.estado = "fuera"; r.corto = "Fuera de época"; r.titulo = `No es época de ${P.sust}`; r.certeza = { n: nCal, txt: txtCal }; return r; }
+    // almácigo o vivero: se riega a mano; solo importa no sembrar con lluvia fuerte
+    if (S.vivero) {
+      const fuerteV = hayClima && prox2.s >= 50;
+      r.estado = fuerteV ? "posible" : enPrin ? "bien" : "posible"; r.corto = fuerteV ? "Proteger" : enPrin ? P.Inf : "Posible";
+      r.titulo = fuerteV ? `${P.Sust} en almácigo posible, pero proteja del aguacero (${prox2.s.toFixed(0)} mm en tres días)` : enPrin ? `Buen momento para ${P.inf} en almácigo o vivero` : `${P.Sust} en vivero posible (con sombra y riego)`;
+      r.certeza = { n: nCal, txt: txtCal }; return r;
+    }
     if (!hayClima || ll10.n < 8) {
       r.estado = enPrin ? "bien" : "posible"; r.corto = enPrin ? "Época" : "Posible";
-      r.titulo = enPrin ? "Época de siembra (sin datos de lluvia para este día)" : "Siembra posible (sin datos de lluvia para este día)";
+      r.titulo = enPrin ? `Época de ${P.sust} (sin datos de lluvia para este día)` : `${P.Sust} posible (sin datos de lluvia para este día)`;
       r.certeza = { n: nCal, txt: `solo ${txtCal}: sin datos de lluvia ni humedad para esta fecha` }; return r;
     }
     const humedo = ll10.s >= 30 || (suelo != null && suelo >= 0.22), medio = ll10.s >= 15 || (suelo != null && suelo >= 0.17);
     const fuerte = prox2.s >= 50;
     r.razones.push({ t: `Lluvia de los últimos 10 días: ${ll10.s.toFixed(0)} mm${suelo != null ? ` · humedad del suelo (9–27 cm): ${(suelo * 100).toFixed(0)} %` : ""}.`, f: "Open-Meteo", n: cc.n });
     if (prox7.n >= 3) r.razones.push({ t: `Lluvia esperada en los 7 días siguientes: ${prox7.s.toFixed(0)} mm.`, f: "Open-Meteo", n: Math.min(cc.n, 1) });
-    if (fuerte) { r.estado = "no"; r.corto = "Esperar"; r.titulo = "Esperar: lluvia fuerte pronosticada"; r.razones.push({ t: `Se esperan ${prox2.s.toFixed(0)} mm en tres días: puede lavar la semilla o encharcar.`, f: "Open-Meteo", n: cc.n }); }
-    else if (conRiego && !enPrin) { r.estado = "posible"; r.corto = "Con riego"; r.titulo = "Siembra posible solo con riego"; }
-    else if (humedo) { r.estado = enPrin ? "bien" : "posible"; r.corto = enPrin ? "Sembrar" : "Posible"; r.titulo = enPrin ? "Buen momento para sembrar: hay humedad" : "Siembra posible: hay humedad"; }
-    else if (medio) { r.estado = "posible"; r.corto = "Posible"; r.titulo = "Humedad justa: sembrar con apoyo de riego o esperar otra lluvia"; }
-    else { r.estado = "no"; r.corto = "Seco"; r.titulo = "Suelo seco: esperar lluvias o regar antes de sembrar"; }
+    if (fuerte) { r.estado = "no"; r.corto = "Esperar"; r.titulo = "Esperar: lluvia fuerte pronosticada"; r.razones.push({ t: `Se esperan ${prox2.s.toFixed(0)} mm en tres días: ${tras ? "puede tumbar o encharcar los plantines recién trasplantados" : "puede lavar la semilla o encharcar"}.`, f: "Open-Meteo", n: cc.n }); }
+    else if (conRiego && !enPrin) { r.estado = "posible"; r.corto = "Con riego"; r.titulo = `${P.Sust} posible solo con riego`; }
+    else if (humedo) { r.estado = enPrin ? "bien" : "posible"; r.corto = enPrin ? P.Inf : "Posible"; r.titulo = enPrin ? `Buen momento para ${P.inf}: hay humedad` : `${P.Sust} posible: hay humedad`;
+      if (tras) r.razones.push({ t: "Conviene trasplantar al atardecer o en un día nublado, y regar enseguida.", f: "Manejo del cultivo", n: 2, nota: true }); }
+    else if (medio) { r.estado = "posible"; r.corto = "Posible"; r.titulo = `Humedad justa: ${P.inf} con apoyo de riego o esperar otra lluvia`; }
+    else { r.estado = "no"; r.corto = "Seco"; r.titulo = `Suelo seco: esperar lluvias o regar antes de ${P.inf}`; }
     // la lluvia fuerte o la sequía son datos firmes; "buen momento" depende además del calendario (máximo: Media; Baja si no tiene fuente)
     r.certeza = { n: (fuerte || !medio) ? cc.n : Math.min(nCal, cc.n), txt: `${cc.txt}${(fuerte || !medio) ? "" : ` + ${txtCal}`}` };
     return r;
@@ -213,4 +254,27 @@ function recomendar(cultivoId, actividad, iso, clima, hoyISO, luna) {
   else { r.estado = "fuera"; r.corto = "No regar"; r.titulo = "No hace falta regar: el suelo tiene agua"; }
   r.certeza = { n: cc.n, txt: cc.txt };
   return r;
+}
+
+// ---- Recomendación para un grupo de cultivos (por ejemplo, todos los cítricos) --------------
+const PRIOR = ["bien", "regar", "posible", "ligero", "no", "fuera", "sd", "na"];
+const esGrupo = id => id.startsWith("g:");
+const idsDe = id => esGrupo(id) ? GRUPOS[+id.slice(2)][1] : [id];
+const nombreSel = id => esGrupo(id) ? GRUPOS[+id.slice(2)][0] : CULTIVOS[id].nombre;
+function recomendarSel(sel, actividad, iso, clima, hoyISO, luna) {
+  if (!esGrupo(sel)) return recomendar(sel, actividad, iso, clima, hoyISO, luna);
+  const ids = idsDe(sel), recs = ids.map(id => ({ id, r: recomendar(id, actividad, iso, clima, hoyISO, luna) }));
+  const cuenta = {}; recs.forEach(o => { cuenta[o.r.estado] = (cuenta[o.r.estado] || 0) + 1; });
+  // estado del grupo: el que más se repite (en empate, el más favorable)
+  const est = Object.keys(cuenta).sort((a, b) => cuenta[b] - cuenta[a] || PRIOR.indexOf(a) - PRIOR.indexOf(b))[0];
+  const ej = recs.find(o => o.r.estado === est).r, n = cuenta[est], m = ids.length;
+  const certs = recs.map(o => o.r.certeza ? o.r.certeza.n : 0);
+  const trad = recs.map(o => o.r.tradicion).filter(Boolean);
+  return {
+    grupo: true, recs, estado: est, corto: n === m ? ej.corto : `${ej.corto} ${n}/${m}`,
+    titulo: n === m ? `${nombreSel(sel)}: ${ej.titulo.charAt(0).toLowerCase() + ej.titulo.slice(1)}` : `${nombreSel(sel)}: ${n} de ${m} cultivos en «${ej.corto.toLowerCase()}»`,
+    razones: recs.map(o => ({ t: `<b>${CULTIVOS[o.id].nombre}</b>: <span class="chip e-${o.r.estado}">${o.r.corto}</span> ${o.r.titulo}`, f: o.r.certeza ? `certeza ${["baja", "media", "alta"][o.r.certeza.n]}` : "", n: o.r.certeza ? o.r.certeza.n : 0 })),
+    certeza: { n: Math.min(...certs), txt: "la menor certeza entre los cultivos del grupo" },
+    tradicion: trad.length && trad.every(t => t.fav === trad[0].fav) ? trad[0] : (trad.length ? { fav: trad.some(t => t.fav), txt: "Según la tradición, depende del cultivo: " + recs.filter(o => o.r.tradicion).map(o => `${CULTIVOS[o.id].nombre} ${o.r.tradicion.fav ? "favorable" : "no favorable"}`).join(", ") + "." } : null),
+  };
 }
