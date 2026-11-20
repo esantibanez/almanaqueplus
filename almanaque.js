@@ -571,7 +571,8 @@ document.getElementById("busca").onsubmit = async e => {
 };
 document.getElementById("imprimir").onclick = () => window.print();
 (() => { const sel = document.getElementById("cultivo");
-  sel.innerHTML = GRUPOS.map(([g, ids], i) => `<optgroup label="${g}"><option value="g:${i}">▸ Todo el grupo: ${g.split(" (")[0].toLowerCase()}</option>${ids.map(id => `<option value="${id}">${CULTIVOS[id].nombre}</option>`).join("")}</optgroup>`).join("");
+  // el nombre del grupo se puede elegir directamente; los cultivos van debajo, con sangría
+  sel.innerHTML = GRUPOS.map(([g, ids], i) => `<option value="g:${i}" class="ogrupo">${g}</option>${ids.map(id => `<option value="${id}" class="ocult">\u00a0\u00a0\u00a0\u00a0${CULTIVOS[id].nombre}</option>`).join("")}`).join("");
   try { const c = localStorage.getItem("almanaquePlusCultivo"); if (c && (CULTIVOS[c] || (esGrupo(c) && GRUPOS[+c.slice(2)]))) cultivo = c; } catch (e) {}
   sel.value = cultivo; })();
 document.getElementById("cultivo").onchange = e => { cultivo = e.target.value; try { localStorage.setItem("almanaquePlusCultivo", cultivo); } catch (er) {} render(); };
