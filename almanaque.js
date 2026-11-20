@@ -559,7 +559,11 @@ document.getElementById("busca").onsubmit = async e => {
   } catch (err) { res.textContent = "No se pudo buscar ahora. Intente de nuevo."; }
 };
 document.getElementById("imprimir").onclick = () => window.print();
-document.getElementById("cultivo").onchange = e => { cultivo = e.target.value; render(); };
+(() => { const sel = document.getElementById("cultivo");
+  sel.innerHTML = GRUPOS.map(([g, ids]) => `<optgroup label="${g}">${ids.map(id => `<option value="${id}">${CULTIVOS[id].nombre}</option>`).join("")}</optgroup>`).join("");
+  try { const c = localStorage.getItem("almanaquePlusCultivo"); if (c && CULTIVOS[c]) cultivo = c; } catch (e) {}
+  sel.value = cultivo; })();
+document.getElementById("cultivo").onchange = e => { cultivo = e.target.value; try { localStorage.setItem("almanaquePlusCultivo", cultivo); } catch (er) {} render(); };
 document.getElementById("actividad").onchange = e => { actividad = e.target.value; render(); };
 document.getElementById("verLuna").onchange = e => { verLuna = e.target.checked; render(); };
 ["dia", "semana", "mes", "lista"].forEach(v => document.getElementById("v_" + v).onclick = () => { vista = v; render(); });
