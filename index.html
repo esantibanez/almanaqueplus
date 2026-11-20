@@ -122,7 +122,18 @@
   .resbusca div { padding:4px 6px; cursor:pointer; border-bottom:1px dotted #cdbf9c; font-size:14px; } .resbusca div:hover { background:#FDE7BF; }
   .ubnota { font-size:12px; color:var(--gris); margin-top:8px; font-style:italic; }
   .mapaub { width:340px; height:210px; border:1px solid var(--tinta); border-radius:4px; flex-shrink:0; }
+  .lunar { background:var(--papel); border:1px solid var(--tinta); border-radius:6px; padding:10px 12px; margin:0 0 12px; }
+  .ltit b { font:700 17px "Playfair", Georgia, serif; } .lsub { font-size:13px; color:var(--gris); margin:3px 0 6px; font-style:italic; }
+  .lchips { display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+  .lgrupo { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--gris); margin:0 2px 0 8px; } .lgrupo:first-child { margin-left:0; }
+  .lchip { font:13px "OldStd", Georgia, serif; border:1px solid #b9a77c; background:#fff; color:var(--tinta); border-radius:14px; padding:3px 10px; }
+  .lchip.on { background:var(--naranja); border-color:var(--tinta); font-weight:bold; } .lchip:hover { background:#FDE7BF; color:var(--tinta); }
+  .ltab { margin-top:8px; width:auto; min-width:60%; } .ltab th { background:var(--tinta); color:var(--naranja); } .ltab td { font-size:13.5px; }
+  .ldias { font-weight:bold; white-space:nowrap; }
+  .glab { font-size:13px; letter-spacing:1px; line-height:1.1; margin-bottom:2px; }
+  .flun ul { margin:4px 0; padding-left:18px; font-size:13px; } .flun li.mio { background:#FDE7BF; }
   @media (max-width:720px) {
+    .glab { font-size:10px; letter-spacing:0; } .ltab { min-width:100%; }
     .ubic { flex-direction:column; } .mapaub { width:100%; height:190px; } .busca input { width:160px; }
     .gdia { min-height:78px; padding:2px 3px 0; } .gnum { font-size:15px; } .gcli span, .gfer, .gico { display:none; } .glun svg { width:12px; height:12px; }
     .grec { font-size:9.5px; margin:0 -3px 0; } .gtrad span { display:none; } .vistas { margin-left:0; }
@@ -134,7 +145,7 @@
   }
   @media print {
     header { background:none; color:#000; border-bottom:2px solid #000; padding:4px; } header img { width:44px; } header .sub { color:#333; }
-    .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
+    .lchips, .lsub, .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
     body { background:#fff; font-size:11px; } main { padding:0; max-width:none; }
     th { background:#eee; color:#000; } td { font-size:10.5px; padding:3px; } td.num { font-size:15px; }
     tr { page-break-inside:avoid; } tr.hoy td { background:none !important; }
@@ -171,6 +182,12 @@
     </div>
   </div>
   <div id="fases"></div>
+  <div class="lunar">
+    <div class="ltit"><b>🌙 Calendario lunar tradicional</b> <span class="nivel ntrad">saber popular · sin respaldo científico</span></div>
+    <div class="lsub">Elija lo que le interesa: el calendario marcará con su ícono los días que la tradición considera buenos para cada labor.</div>
+    <div id="lunarChips" class="lchips"></div>
+    <div id="lunarTabla"></div>
+  </div>
   <div class="huerta">
     <div class="hsel"><b>🌱 Huerta y chaco</b>
       <label>Cultivo <select id="cultivo">
@@ -200,6 +217,7 @@
     (1) un calendario general de cultivos para la Chiquitanía (certeza media: conviene confirmarlo con productores de la zona);
     (2) la lluvia, la evaporación y la humedad del suelo del último mes y del pronóstico de 16 días (certeza alta para días ya ocurridos y los próximos 3, media hasta una semana, baja después);
     (3) la tradición de sembrar y podar según la luna, que se muestra aparte porque no tiene respaldo científico. Es una orientación: la decisión final es de quien trabaja la tierra.
+    <b>Calendario lunar tradicional:</b> recoge las costumbres de los almanaques populares para la huerta y la pesca (abonar en luna nueva, sembrar plantas de altura en cuarto creciente, cosechar en luna llena, sembrar raíces y podar en cuarto menguante, pescar cerca de la luna nueva). Las fechas se calculan con la fase real de la luna para cada mes; es saber popular, no una recomendación técnica.
     <b>Satélites:</b> pasadas diurnas de Landsat 8 y 9 y Sentinel-2 sobre el lugar, calculadas con sus órbitas oficiales;
     que pase el satélite no garantiza una imagen sin nubes. 
   </div>
@@ -210,8 +228,8 @@ Fuentes: algoritmos astronómicos de J. Meeus · SunCalc · Open-Meteo · NORAD/
 <script src="lib/leaflet.js"></script>
 <script src="lib/suncalc.js"></script>
 <script src="lib/satellite.min.js"></script>
-<script src="santoral.js?v=202611201306"></script>
-<script src="siembra.js?v=202611201306"></script>
-<script src="almanaque.js?v=202611201306"></script>
+<script src="santoral.js?v=202611201431"></script>
+<script src="siembra.js?v=202611201431"></script>
+<script src="almanaque.js?v=202611201431"></script>
 </body>
 </html>

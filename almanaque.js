@@ -223,6 +223,51 @@ function datosDia(a, m, d, moviles) {
 }
 // ---- Huerta y chaco: cultivo y actividad elegidos ---------------------------------
 let cultivo = "maiz", actividad = "siembra", vista = "cal", diasMes = [], verLuna = true;
+// ---- Calendario lunar tradicional (huerta y pesca) ------------------------------------
+// Ventanas según la edad de la luna (0 = nueva, 0.25 = cuarto creciente, 0.5 = llena, 0.75 = cuarto menguante).
+// Es saber popular de los almanaques: no tiene respaldo científico.
+const LABORES = [
+  { id: "abonar", ico: "🪴", nombre: "Abonar", grupo: "Huerta", desde: 0.94, hasta: 0.06, fase: "luna nueva",
+    txt: "Con la luna nueva, dice la tradición, la savia está baja y en las raíces: momento para abonar y preparar la tierra." },
+  { id: "trasplantar", ico: "🌱", nombre: "Germinar y trasplantar", grupo: "Huerta", desde: 0.19, hasta: 0.31, fase: "cuarto creciente",
+    txt: "En cuarto creciente la savia sube a tallos y hojas: se aconseja poner semillas a germinar y trasplantar plantines." },
+  { id: "altura", ico: "🌽", nombre: "Sembrar plantas de altura", grupo: "Huerta", desde: 0.19, hasta: 0.31, fase: "cuarto creciente",
+    txt: "Las plantas que dan fruto sobre la tierra (maíz, frejol, sandía, frutales) se siembran, según la costumbre, con la luna creciendo." },
+  { id: "cosechar", ico: "🧺", nombre: "Cosechar", grupo: "Huerta", desde: 0.44, hasta: 0.56, fase: "luna llena",
+    txt: "En luna llena la savia está en lo alto: la tradición dice que frutos y hojas están más jugosos para cosechar." },
+  { id: "deshierbar", ico: "🌾", nombre: "Deshierbar", grupo: "Huerta", desde: 0.44, hasta: 0.56, fase: "luna llena",
+    txt: "Se dice que la maleza arrancada en luna llena rebrota menos." },
+  { id: "raiz", ico: "🥔", nombre: "Sembrar plantas de raíz", grupo: "Huerta", desde: 0.69, hasta: 0.81, fase: "cuarto menguante",
+    txt: "En cuarto menguante la savia baja a las raíces: momento tradicional para sembrar yuca, papa, camote, zanahoria y cebolla." },
+  { id: "podar", ico: "✂️", nombre: "Podar", grupo: "Huerta", desde: 0.69, hasta: 0.81, fase: "cuarto menguante",
+    txt: "Con menos savia en las ramas, dice la costumbre, la planta sangra menos y cicatriza mejor después de la poda." },
+  { id: "pescaExc", ico: "🎣", nombre: "Pesca: pique excelente", grupo: "Pesca", desde: 0.91, hasta: 0.09, fase: "alrededor de la luna nueva",
+    txt: "Con noches oscuras, dicen los pescadores, los peces salen a comer con más confianza: los días cercanos a la luna nueva son los de mejor pique." },
+  { id: "pescaBue", ico: "🐟", nombre: "Pesca: pique bueno", grupo: "Pesca", desde: 0.75, hasta: 0.91, fase: "luna menguante",
+    txt: "Con la luna menguando, las noches se van oscureciendo y el pique mejora. Se recomienda pescar al amanecer o al atardecer." },
+];
+const enVentana = (p, L) => L.desde < L.hasta ? (p >= L.desde && p < L.hasta) : (p >= L.desde || p < L.hasta);
+let intereses = new Set(["altura", "raiz", "cosechar", "pescaExc"]);
+try { const g = JSON.parse(localStorage.getItem("almanaquePlusIntereses")); if (Array.isArray(g)) intereses = new Set(g); } catch (e) {}
+function rangos(dias) {   // [1,2,3,7,8] -> "1–3, 7–8"
+  const out = []; let a = null, b = null;
+  for (const d of dias) { if (a === null) { a = b = d; } else if (d === b + 1) b = d; else { out.push(a === b ? `${a}` : `${a}–${b}`); a = b = d; } }
+  if (a !== null) out.push(a === b ? `${a}` : `${a}–${b}`);
+  return out.join(", ");
+}
+function renderLunar() {
+  const caja = document.getElementById("lunarChips");
+  caja.innerHTML = ["Huerta", "Pesca"].map(g => `<span class="lgrupo">${g === "Huerta" ? "Huerta y chaco" : "Pesca"}</span>` +
+    LABORES.filter(L => L.grupo === g).map(L => `<button class="lchip ${intereses.has(L.id) ? "on" : ""}" data-id="${L.id}">${L.ico} ${L.nombre}</button>`).join("")).join("");
+  caja.querySelectorAll(".lchip").forEach(b => b.onclick = () => {
+    intereses.has(b.dataset.id) ? intereses.delete(b.dataset.id) : intereses.add(b.dataset.id);
+    try { localStorage.setItem("almanaquePlusIntereses", JSON.stringify([...intereses])); } catch (e) {}
+    render(); });
+  const sel = LABORES.filter(L => intereses.has(L.id));
+  document.getElementById("lunarTabla").innerHTML = sel.length ? `<table class="ltab"><thead><tr><th>Labor</th><th>Fase</th><th>Días de ${NOMBRE_MES[mes].toLowerCase()}</th></tr></thead><tbody>` +
+    sel.map(L => `<tr><td>${L.ico} <b>${L.nombre}</b></td><td>${L.fase}</td><td class="ldias">${rangos(diasMes.filter(x => x.trad.includes(L)).map(x => x.d)) || "—"}</td></tr>`).join("") +
+    `</tbody></table>` : `<div class="nota">Elija arriba qué le interesa para ver sus días en el calendario.</div>`;
+}
 const isoDe = (a, m, d) => `${a}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 const hoyISO = () => fmt(new Date(), { year: "numeric", month: "2-digit", day: "2-digit" }).split("/").reverse().join("-");
 const NIV = ["Baja", "Media", "Alta"];
@@ -244,7 +289,9 @@ function render() {
     const x = datosDia(anio, mes, d, moviles), k = claveDia(x.f), iso = isoDe(anio, mes, d);
     x.iso = iso; x.k = k; x.hoy = k === hk; x.cl = clima[iso]; x.fz = faseDia[k]; x.pas = pas[k] || [];
     x.dom = fmt(x.f, { weekday: "long" }) === "domingo"; x.fer = x.marcas.some(z => z.tipo === "feriado");
-    x.rec = recomendar(cultivo, actividad, iso, clima, hI, { cre: x.cre, frac: x.il.fraction });
+    x.edad = SunCalc.getMoonIllumination(diaBo(anio, mes, d, 12)).phase;
+    x.rec = recomendar(cultivo, actividad, iso, clima, hI, { cre: x.cre, frac: x.il.fraction, edad: x.edad });
+    x.trad = LABORES.filter(L => enVentana(x.edad, L));
     diasMes.push(x);
   }
   vista === "cal" ? renderCal() : renderLista();
@@ -253,7 +300,7 @@ function render() {
   const fueraOrb = diaBo(anio, mes, 1, 0) > Date.now() + MAX_DIAS_ORBITA * 86400000 || diaBo(anio, mes + 1, 1, 0) < Date.now() - MAX_DIAS_ORBITA * 86400000;
   document.getElementById("notaSat").textContent = !orbitasListas ? "Satélites: no se pudieron cargar las órbitas." :
     fueraOrb ? `Satélites: se muestran solo hasta ${MAX_DIAS_ORBITA} días antes o después de hoy (más allá, el cálculo pierde precisión).` : "";
-  renderHoy(); renderHumedad();
+  renderHoy(); renderHumedad(); renderLunar();
 }
 function renderCal() {
   const cab = ["do.", "lu.", "ma.", "mi.", "ju.", "vi.", "sá."];
@@ -269,6 +316,7 @@ function renderCal() {
       <div class="gico">${ico}</div>
       ${x.fer ? `<div class="gfer">${x.marcas.find(z => z.tipo === "feriado").txt}</div>` : ""}
       <div class="gesp"></div>
+      ${x.trad.filter(L => intereses.has(L.id)).length ? `<div class="glab">${x.trad.filter(L => intereses.has(L.id)).map(L => `<span title="${L.nombre}">${L.ico}</span>`).join("")}</div>` : ""}
       ${verLuna && x.rec.tradicion && x.rec.tradicion.fav ? `<div class="gtrad" title="Día favorable según la tradición lunar">🌙 <span>luna favorable</span></div>` : ""}
       <div class="grec e-${x.rec.estado}">${x.rec.corto}</div></div>`;
   }
@@ -299,7 +347,7 @@ function ficha(d) {
   const x = diasMes[d - 1], cl = x.cl, R = x.rec, C = CULTIVOS[cultivo];
   const certeza = R.certeza ? `<span class="nivel n${R.certeza.n}">Certeza ${NIV[R.certeza.n].toLowerCase()}</span> <small>${R.certeza.txt}</small>` : "";
   const otras = Object.keys(ACTIVIDADES).filter(a => a !== actividad).map(a => {
-    const o = recomendar(cultivo, a, x.iso, clima, hoyISO(), { cre: x.cre, frac: x.il.fraction });
+    const o = recomendar(cultivo, a, x.iso, clima, hoyISO(), { cre: x.cre, frac: x.il.fraction, edad: x.edad });
     return `<div class="otra"><b>${ACTIVIDADES[a]}:</b> <span class="chip e-${o.estado}">${o.corto}</span> ${o.titulo}</div>`; }).join("");
   document.getElementById("fichaCont").innerHTML = `
     <div class="fcab"><div><div class="hd">${fmt(x.f, { weekday: "long" })}</div><div class="fn">${d} de ${NOMBRE_MES[mes].toLowerCase()} de ${anio}</div></div>
@@ -313,6 +361,8 @@ function ficha(d) {
       ${R.tradicion ? `<div class="trad">🌙 <b>Tradición popular</b> <span class="nivel ntrad">sin respaldo científico</span><br>${R.tradicion.txt}</div>` : ""}
       ${otras ? `<div class="otras">${otras}</div>` : ""}
     </div>
+    ${x.trad.length ? `<div class="fbloque flun"><b>🌙 Según la luna (tradición)</b> <span class="nivel ntrad">sin respaldo científico</span>
+      <ul>${x.trad.map(L => `<li class="${intereses.has(L.id) ? "mio" : ""}">${L.ico} <b>${L.nombre}</b> — ${L.txt}</li>`).join("")}</ul></div>` : ""}
     <div class="fbloque"><b>☀️ Sol</b> sale ${hora(x.sol.sunrise)} · se pone ${hora(x.sol.sunset)} · ${Math.floor(x.durMin / 60)} h ${Math.round(x.durMin % 60)} min de luz</div>
     <div class="fbloque"><b>🌙 Luna</b> ${lunaSVG(x.il.fraction, x.cre, 18)} ${x.fz ? `<b>${FASES[x.fz.tipo][0]}</b> a las ${hora(x.fz.t)}` : nombreFase(x.il.fraction, x.cre)},
       iluminada ${Math.round(x.il.fraction * 100)} % · sale ${x.lunaT.rise ? hora(x.lunaT.rise) : "—"} · se pone ${x.lunaT.set ? hora(x.lunaT.set) : "—"}</div>

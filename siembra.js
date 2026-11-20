@@ -63,12 +63,14 @@ function recomendar(cultivoId, actividad, iso, clima, hoyISO, luna) {
   const suelo = c && c.suelo != null ? c.suelo : null;
   const cc = hayClima ? certezaClima(iso, hoyISO) : null;
 
-  // tradición lunar (aparte; no cambia la recomendación técnica)
+  // tradición lunar (aparte; no cambia la recomendación técnica): mismas ventanas que el calendario lunar tradicional
+  const ventana = id => LABORES.find(L => L.id === id), dentro = id => luna.edad != null && enVentana(luna.edad, ventana(id));
   if (actividad === "siembra") {
-    const quiere = C.raiz ? "menguante" : "creciente", fav = C.raiz ? !luna.cre : luna.cre;
-    r.tradicion = { fav, txt: `La tradición aconseja sembrar ${C.raiz ? "raíces y tubérculos" : "lo que da fruto sobre la tierra"} en luna ${quiere}. Hoy la luna está ${luna.cre ? "creciente" : "menguante"}: ${fav ? "día favorable" : "día no favorable"} según la costumbre.` };
+    const id = C.raiz ? "raiz" : "altura", L = ventana(id), fav = dentro(id);
+    r.tradicion = { fav, txt: `La tradición aconseja sembrar ${C.raiz ? "raíces y tubérculos" : "lo que da fruto sobre la tierra"} en ${L.fase}. ${fav ? "Este día cae en esa ventana: favorable" : "Este día no cae en esa ventana: no favorable"} según la costumbre.` };
   } else if (actividad === "poda" && C.poda) {
-    r.tradicion = { fav: !luna.cre, txt: `La tradición aconseja podar en luna menguante, cuando "baja la savia". Hoy la luna está ${luna.cre ? "creciente" : "menguante"}: ${!luna.cre ? "día favorable" : "día no favorable"} según la costumbre.` };
+    const fav = dentro("podar");
+    r.tradicion = { fav, txt: `La tradición aconseja podar en cuarto menguante, cuando "baja la savia". ${fav ? "Este día cae en esa ventana: favorable" : "Este día no cae en esa ventana: no favorable"} según la costumbre.` };
   }
 
   if (actividad === "siembra") {
