@@ -178,6 +178,24 @@
   .binfo { font-size:0.85rem; }
   dl.info { margin:8px 0 0; font-size:0.9rem; } dl.info dt { font-weight:700; margin-top:10px; } dl.info dd { margin:2px 0 0 0; padding-left:1.6em; }
   dl.info ul, dl.info ol { margin:4px 0; padding-left:1.3em; }
+  .campo, .cuaderno { background:var(--papel); border:1px solid var(--tinta); border-radius:6px; padding:10px 12px; margin:0 0 12px; outline:1px solid var(--tinta); outline-offset:-5px; }
+  .ctit { font-weight:700; font-size:1.1rem; margin-bottom:6px; } .voz { float:right; font-size:1rem; padding:2px 10px; }
+  .cgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:8px; }
+  .cbox { background:var(--blanco); border:1px solid var(--linea); border-radius:6px; padding:8px 10px; font-size:0.9rem; }
+  .cbt { font-weight:700; margin-bottom:5px; } .csub { font-size:0.8rem; color:var(--gris); margin-top:5px; }
+  .cbox select { width:100%; font-size:0.85rem; margin-bottom:4px; }
+  .alerta { display:flex; gap:7px; align-items:flex-start; border-left:4px solid #ccc; padding:3px 0 3px 6px; margin:3px 0; font-size:0.88rem; }
+  .alerta small { color:var(--gris); } .aico { font-size:1.2rem; line-height:1.2; }
+  .alerta.al2 { border-color:#A3231B; } .alerta.al1 { border-color:#E8C25A; } .alerta.al0 { border-color:#3C8D40; }
+  .fum { margin:3px 0; font-size:0.9rem; } .fum.ok b { color:#3C8D40; } .fum.no b { color:#A0522D; }
+  .ith0, .inc0 { background:#3C8D40; color:#fff; } .ith1, .inc1 { background:#E8C25A; color:#3b2f0b; } .ith2, .inc2 { background:#D2691E; color:#fff; } .ith3, .inc3 { background:#A3231B; color:#fff; }
+  .cuadform { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; margin:6px 0 10px; font-size:0.85rem; }
+  .cuadform label { display:flex; flex-direction:column; gap:2px; } .cuadform .ancha { flex:1; min-width:180px; }
+  .cuadform input, .cuadform select { font:inherit; font-size:0.9rem; padding:4px 6px; border:1px solid var(--linea); border-radius:5px; background:var(--blanco); color:var(--tinta); }
+  .cuad { background:var(--blanco); border:1px solid var(--linea); border-radius:6px; padding:7px 10px; margin:6px 0; font-size:0.9rem; }
+  .cuadcab { display:flex; flex-wrap:wrap; gap:6px; align-items:baseline; } .cuadf { color:var(--gris); font-size:0.8rem; }
+  .cuadx { margin-left:auto; padding:0 7px; font-size:0.85rem; } .cuadn { color:var(--gris); font-size:0.8rem; font-style:italic; }
+  .cuad ul { margin:4px 0 0; padding-left:18px; }
   #cultivo option.ogrupo { font-weight:bold; background:var(--crema); } #cultivo option.ocult { font-weight:normal; }
   .lunar { background:var(--papel); border:1px solid var(--tinta); border-radius:6px; padding:10px 12px; margin:0 0 12px; }
   .ltit b { font:700 1.062rem "Texto", "Segoe UI", Roboto, Arial, sans-serif; } .lsub { font-size:0.8125rem; color:var(--gris); margin:3px 0 6px; font-style:italic; }
@@ -219,7 +237,7 @@
   @media print {
     html, html[data-tema="oscuro"] { --crema:#fff; --papel:#fff; --blanco:#fff; --tinta:#000; --verde:#000; --gris:#444; --linea:#bbb; --oscuro:#000; font-size:100%; }
     header { background:none; color:#000; border-bottom:2px solid #000; padding:4px; } header img { width:44px; } header .sub { color:#333; }
-    .ginfo, #btnFuentes, .ajustes, .binst, .pwa, .pwaver, .lchips, .lsub, .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
+    .campo .voz, .binfo, .cuadform, .cuadx, .ginfo, #btnFuentes, .ajustes, .binst, .pwa, .pwaver, .lchips, .lsub, .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
     body { background:var(--blanco); font-size:0.6875rem; } main { padding:0; max-width:none; }
     th { background:#eee; color:#000; } td { font-size:0.6562rem; padding:3px; } td.num { font-size:0.9375rem; }
     tr { page-break-inside:avoid; } tr.hoy td { background:none !important; }
@@ -252,6 +270,7 @@
     <div id="mapaUb" class="mapaub"></div>
   </div>
   <div id="hoy"></div>
+  <div id="campo" class="campo"></div>
   <div class="barra">
     <button id="ant" aria-label="Día anterior">◀</button><h2 id="titMes"></h2><button id="sig" aria-label="Día siguiente">▶</button>
     <button id="hoyBtn">Hoy</button>
@@ -283,6 +302,18 @@
   <div id="vista"></div>
   <div id="ficha" class="ficha" role="dialog" aria-modal="true"><div id="fichaCont" class="fcont"></div></div>
   <div class="nota" id="notaSat"></div>
+  <div class="cuaderno" id="cuaderno">
+    <div class="ctit">📒 Mi cuaderno de campo</div>
+    <div class="lsub">Anote lo que sembró o trasplantó: el almanaque calcula las etapas y la cosecha estimada, y las marca en el calendario.</div>
+    <form id="cuadForm" class="cuadform">
+      <label>Cultivo <select id="cuadCultivo"></select></label>
+      <label>Fecha <input type="date" id="cuadFecha" required></label>
+      <label>Parcela <input type="text" id="cuadParcela" placeholder="Ej.: chaco de abajo" maxlength="40"></label>
+      <label class="ancha">Nota <input type="text" id="cuadNota" placeholder="Variedad, cantidad de semilla…" maxlength="120"></label>
+      <button class="prim">Anotar</button>
+    </form>
+    <div id="cuadernoLista"></div>
+  </div>
   <div class="metodo">
     <h4>Sobre este almanaque</h4>
     Horas de Bolivia. <b>Sol y luna:</b> calculados para el lugar elegido; las fases de la luna y el inicio de las estaciones, con los
@@ -295,6 +326,7 @@
     (2) la lluvia, la evaporación y la humedad del suelo del último mes y del pronóstico de 16 días (certeza alta para días ya ocurridos y los próximos 3, media hasta una semana, baja después);
     (3) la tradición de sembrar y podar según la luna, que se muestra aparte porque no tiene respaldo científico. <b>Siembra y trasplante:</b> en las hortalizas de almácigo (tomate, pimentón, ají, lechuga, cebolla y repollo), "Siembra" es poner la semilla en el almácigo y "Trasplante" es llevar el plantín al terreno; en frutales y cítricos, "sembrar" y "trasplantar" significan plantar el plantín en el terreno (la semilla en vivero se puede poner todo el año); los cultivos de siembra directa (granos, zanahoria, sandía, yuca…) no se trasplantan, y los que se propagan por hijuelos (plátano, guineo, piña) solo tienen trasplante. Al elegir un grupo entero (por ejemplo, todos los cítricos) se muestra cuántos cultivos del grupo están en cada situación y la ficha del día detalla cada uno. Toque <b>ⓘ</b> en cualquier día, o «Fuentes de los datos», para ver de dónde sale cada dato. Es una orientación: la decisión final es de quien trabaja la tierra.
     <b>Calendario lunar tradicional:</b> recoge las costumbres de los almanaques populares para la huerta y la pesca (abonar en luna nueva, sembrar plantas de altura en cuarto creciente, cosechar en luna llena, sembrar raíces y podar en cuarto menguante, pescar cerca de la luna nueva). Las fechas se calculan con la fase real de la luna para cada mes; es saber popular, no una recomendación técnica.
+    <b>Hoy en el campo:</b> alertas de clima extremo (helada, surazo, granizo, lluvia fuerte, calor, viento y veranillo), ventanas para fumigar con productos orgánicos según viento, lluvia, calor, humedad y sol, riesgo de incendio (índice de Angström) con los focos de calor de NASA FIRMS de las últimas 48 horas, y estrés calórico del ganado (índice de temperatura y humedad). Son orientaciones de guía general calculadas con el pronóstico por hora. <b>Cuaderno de campo:</b> lo anotado se guarda solo en su dispositivo; las fechas de cosecha son aproximadas.
     <b>Satélites:</b> pasadas diurnas de Landsat 8 y 9 y Sentinel-2 sobre el lugar, calculadas con sus órbitas oficiales;
     que pase el satélite no garantiza una imagen sin nubes. 
   </div>
@@ -305,12 +337,13 @@
 <footer><b>Elaborado por: Eder Santibáñez</b><br>
 Fuentes: algoritmos astronómicos de J. Meeus · SunCalc · Open-Meteo · NORAD/CelesTrak · Decretos Supremos 2750 y 5521<br>
 <small>Proyecto independiente, inspirado en los almanaques tradicionales como el Almanaque Bristol. No está afiliado a Lanman &amp; Kemp-Barclay &amp; Co. ni a sus marcas.</small></footer>
-<script src="pwa.js?v=202611201547"></script>
+<script src="pwa.js?v=202611201559"></script>
 <script src="lib/leaflet.js"></script>
 <script src="lib/suncalc.js"></script>
 <script src="lib/satellite.min.js"></script>
-<script src="santoral.js?v=202611201547"></script>
-<script src="siembra.js?v=202611201547"></script>
-<script src="almanaque.js?v=202611201547"></script>
+<script src="santoral.js?v=202611201559"></script>
+<script src="campo.js"></script>
+<script src="siembra.js?v=202611201559"></script>
+<script src="almanaque.js?v=202611201559"></script>
 </body>
 </html>

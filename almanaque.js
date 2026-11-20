@@ -148,14 +148,19 @@ const CLIMA = { 0: ["☀️", "Despejado"], 1: ["🌤️", "Mayormente despejado
 let clima = {}, climaLugar = null;
 async function cargarClima() {
   if (climaLugar === lugar.nombre) return;
-  clima = {}; climaLugar = lugar.nombre;
+  clima = {}; horas = []; climaLugar = lugar.nombre;
   try {
     const u = `https://api.open-meteo.com/v1/forecast?latitude=${lugar.lat}&longitude=${lugar.lon}` +
       `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,et0_fao_evapotranspiration` +
-      `&hourly=soil_moisture_9_to_27cm&timezone=${encodeURIComponent(ZONA)}&past_days=31&forecast_days=16`;
+      `&hourly=soil_moisture_9_to_27cm,temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index` +
+      `&timezone=${encodeURIComponent(ZONA)}&past_days=31&forecast_days=16`;
     const r = await fetch(u); if (!r.ok) return;
     const j = await r.json(), D = j.daily, H = j.hourly || {}, sm = {}; climaHora = new Date();
     (H.time || []).forEach((t, i) => { const v = H.soil_moisture_9_to_27cm[i]; if (v == null) return; const k = t.slice(0, 10); (sm[k] = sm[k] || []).push(v); });
+    const val = (k, i) => H[k] ? H[k][i] : null;
+    horas = (H.time || []).map((t, i) => ({ iso: t.slice(0, 10), h: +t.slice(11, 13), temp: val("temperature_2m", i), hr: val("relative_humidity_2m", i),
+      lluvia: val("precipitation", i), prob: val("precipitation_probability", i), viento: val("wind_speed_10m", i), rafaga: val("wind_gusts_10m", i),
+      dir: val("wind_direction_10m", i), uv: val("uv_index", i) }));
     D.time.forEach((t, i) => { clima[t] = { cod: D.weather_code[i], max: D.temperature_2m_max[i], min: D.temperature_2m_min[i],
       lluvia: D.precipitation_sum[i], prob: D.precipitation_probability_max[i], viento: D.wind_speed_10m_max[i], et0: D.et0_fao_evapotranspiration[i],
       suelo: sm[t] ? sm[t].reduce((x, y) => x + y, 0) / sm[t].length : null }; });
@@ -317,7 +322,7 @@ function render() {
   const fueraOrb = diaBo(anio, mes, 1, 0) > Date.now() + MAX_DIAS_ORBITA * 86400000 || diaBo(anio, mes + 1, 1, 0) < Date.now() - MAX_DIAS_ORBITA * 86400000;
   document.getElementById("notaSat").textContent = !orbitasListas ? "Satélites: no se pudieron cargar las órbitas." :
     fueraOrb ? `Satélites: se muestran solo hasta ${MAX_DIAS_ORBITA} días antes o después de hoy (más allá, el cálculo pierde precisión).` : "";
-  renderHoy(); renderHumedad(); renderLunar();
+  renderHoy(); renderHumedad(); renderLunar(); renderCampo();
 }
 function irA(a, m, d, v) { const f = new Date(Date.UTC(a, m, d)); anio = f.getUTCFullYear(); mes = f.getUTCMonth(); dia = f.getUTCDate(); if (v) vista = v; render();
   document.getElementById("vista").scrollIntoView({ behavior: "smooth", block: "start" }); }
@@ -406,7 +411,9 @@ function renderCal() {
   for (let i = 0; i < primero; i++) h += `<div class="gvacio"></div>`;
   for (const x of diasMes) {
     const ci = x.cl ? (CLIMA[x.cl.cod] || ["", ""])[0] : "";
-    const ico = (x.marcas.some(z => z.tipo === "ambiental") ? "🌱" : "") + (x.pas.length ? "🛰️" : "");
+    const al = alertasDia(x.iso), ev = eventosDelDia(x.iso);
+    const ico = (al.length ? `<span title="${al.map(a => a.tit).join(", ")}">${al.some(a => a.n === 2) ? "⚠️" : "❕"}</span>` : "") + (ev.length ? `<span title="${ev.map(v => v.txt).join(", ")}">📒</span>` : "") +
+      (x.marcas.some(z => z.tipo === "ambiental") ? "🌱" : "") + (x.pas.length ? "🛰️" : "");
     h += `<div class="gdia ${x.dom ? "dom" : ""} ${x.fer ? "fer" : ""} ${x.hoy ? "hoy" : ""}" data-d="${x.d}" tabindex="0" role="button" aria-label="${x.d} de ${NOMBRE_MES[mes]}">
       <div class="gnum">${x.d}<button class="ginfo" data-i="${x.d}" title="¿De dónde salen estos datos?" aria-label="Origen de los datos del día ${x.d}">i</button></div><div class="glun">${lunaSVG(x.il.fraction, x.cre, 16)}</div>
       <div class="gcli">${ci}${x.cl ? `<span>${Math.round(x.cl.max)}°</span>` : ""}</div>
@@ -469,7 +476,14 @@ function fichaHTML(x, modal) {
       · lluvia ${cl.lluvia.toFixed(1)} mm${cl.prob != null ? ` (prob. ${cl.prob} %)` : ""} · viento ${Math.round(cl.viento)} km/h
       ${cl.et0 != null ? `· evaporación ${cl.et0.toFixed(1)} mm` : ""}${cl.suelo != null ? ` · humedad del suelo ${(cl.suelo * 100).toFixed(0)} %` : ""}` :
       "Sin datos: hay datos del último mes y pronóstico de los próximos 16 días."}</div>
-    <div class="fbloque"><button class="binfo" onclick="info(${x.d})">ⓘ ¿De dónde salen estos datos?</button></div>
+    ${(() => { const al = alertasDia(x.iso), it = ithDia(x.iso), inc = incendioDia(x.iso), fu = ventanasFumigar(x.iso, tipoOrg), ev = eventosDelDia(x.iso);
+      return (al.length ? `<div class="fbloque"><b>⚠️ Alertas</b>${al.map(a => `<div class="alerta al${a.n}"><span class="aico">${a.ico}</span><div><b>${a.tit}</b><br><small>${a.txt}</small></div></div>`).join("")}</div>` : "")
+        + (fu ? `<div class="fbloque"><b>🌿 Fumigar (${ORGANICOS[tipoOrg].nombre.split(" (")[0].toLowerCase()})</b> ${fu.vent.length ? `✅ de ${txtVent(fu.vent)}` : `⛔ sin buen momento${fu.fallas.length ? ` (${fu.fallas.slice(0, 2).join("; ")})` : ""}`}</div>` : "")
+        + (inc ? `<div class="fbloque"><b>🔥 Riesgo de incendio</b> <span class="chip inc${inc.n}">${inc.tit}</span></div>` : "")
+        + (it ? `<div class="fbloque"><b>🐄 Calor para el ganado</b> <span class="chip ith${it.n}">${it.tit} (${it.v})</span></div>` : "")
+        + (ev.length ? `<div class="fbloque"><b>📒 Mi cuaderno</b>${ev.map(v => `<div>${v.ico} ${v.txt}${v.fin ? " (último día estimado)" : ""}: ${CULTIVOS[v.e.cultivo].nombre}${v.e.parcela ? `, ${v.e.parcela}` : ""}</div>`).join("")}</div>` : "");
+    })()}
+    <div class="fbloque"><button class="binfo" onclick="info(${x.d})">ⓘ ¿De dónde salen estos datos?</button> <button class="binfo" onclick="leerFicha()">🔊 Leer en voz alta</button></div>
     <div class="fbloque"><b>🛰️ Satélites</b> ${x.pas.length ? x.pas.map(p => `${p.s.nombre} a las ${hora(p.t)}`).join(" · ") : "Ninguna pasada de Landsat o Sentinel-2 sobre el lugar."}</div>`;
 }
 function ficha(d) { document.getElementById("fichaCont").innerHTML = fichaHTML(diasMes[d - 1], true); document.getElementById("ficha").classList.add("on"); }
@@ -500,6 +514,13 @@ function infoHTML(x) {
         `<dt>🌱 Siembra, trasplante, poda y riego</dt><dd>Calendario por cultivo:<ul>${calendario}</ul>más la lluvia y la humedad del suelo de Open-Meteo.</dd>`}
       <dt>🌦️ Clima</dt><dd>${climaHora ? `<a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, consultado hoy a las ${hora(climaHora)} para las coordenadas del lugar. Combina varios modelos meteorológicos (ECMWF, GFS, ICON y otros) en una cuadrícula de pocos kilómetros: no es una estación en el lugar.` : "No se pudo consultar Open-Meteo (sin internet o servicio no disponible)."}
         ${x ? (x.cl ? `<br>Para este día: ${tipoClima}.` : "<br>Para este día no hay datos: se cubre el último mes y los próximos 16 días.") : "<br>Cubre los últimos 31 días y los próximos 16."}</dd>
+      <dt>⚠️ Alertas, 🌿 fumigación, 🐄 ganado y 🔥 incendio</dt><dd>Se calculan con el pronóstico por hora de Open-Meteo (temperatura, humedad, lluvia, viento, ráfagas y radiación ultravioleta).
+        Alertas: umbrales de guía general (helada con mínima de 2° o menos, lluvia fuerte desde 30 mm, calor desde 36°, ráfagas desde 50 km/h, veranillo de 10 días sin lluvia en época de lluvias, surazo por caída brusca de temperatura con viento del sur).
+        Ganado: índice de temperatura y humedad (ITH) de Thom, con los niveles del Livestock Weather Safety Index (alerta desde 75, peligro desde 79, emergencia desde 84).
+        Incendio: índice de Angström (humedad y temperatura de la 1 de la tarde), moderado según la lluvia de los últimos días porque en el trópico tiende a exagerar. Fumigación: condiciones de aplicación de guía general para cada tipo de producto orgánico.
+        ${focos ? `<br>Focos de calor: <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a> (satélites VIIRS y MODIS), últimas 48 horas, descargados el ${fmt(new Date(focos.generado), { day: "numeric", month: "long" })} a las ${hora(new Date(focos.generado))}.` : ""}</dd>
+      <dt>📒 Cuaderno de campo</dt><dd>Lo que usted anota se guarda solo en su teléfono o computadora. Las fechas de cosecha y etapas son ciclos aproximados de guía general (varían según variedad y clima); la yuca usa los ciclos del CIAT Roboré.</dd>
+      <dt>🔊 Voz</dt><dd>Lectura con la voz que trae su teléfono o computadora.</dd>
       <dt>☀️ Sol y 🌙 luna</dt><dd>Calculados en su dispositivo para las coordenadas del lugar: salida y puesta con SunCalc; fases de la luna y estaciones con los algoritmos astronómicos de Jean Meeus (precisión de minutos).</dd>
       <dt>⛪ Santoral</dt><dd>Santo o fiesta principal del calendario católico (fiestas fijas); las fiestas móviles se calculan a partir de la fecha de Pascua.</dd>
       <dt>🇧🇴 Feriados</dt><dd>Decreto Supremo 2750 y traslados del Decreto Supremo 5521 (2026). Los traslados de otros años se agregan cuando el Gobierno los publica.</dd>
@@ -626,7 +647,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") cerrarFicha(
   document.getElementById("lugarNom").textContent = lugar.nombre; document.getElementById("lugarTxt").textContent = lugar.nombre;
   document.getElementById("lugarDet").textContent = [lugar.detalle, `${lugar.lat.toFixed(4)}, ${lugar.lon.toFixed(4)}`].filter(Boolean).join(" · ");
   marcaUb.setLatLng([lugar.lat, lugar.lon]); mapaUb.setView([lugar.lat, lugar.lon], 11);
-  render(); await Promise.all([cargarClima(), cargarOrbitas()]); render();
+  iniciarCuaderno();
+  render(); await Promise.all([cargarClima(), cargarOrbitas(), cargarFocos()]); render();
   // primera visita: pedir la ubicación del dispositivo (si la niega, queda Roboré)
   if (!guardado) usarGPS(true);
 })();

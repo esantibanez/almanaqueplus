@@ -1,0 +1,44 @@
+# Descarga cada 3 horas los focos de calor de NASA FIRMS (últimas 48 h) de Bolivia, para el almanaque
+name: Actualizar focos de calor
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  focos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descargar y filtrar focos
+        run: |
+          set -e
+          base="https://firms.modaps.eosdis.nasa.gov/data/active_fire"
+          curl -fsSL --retry 3 "$base/noaa-20-viirs-c2/csv/J1_VIIRS_C2_South_America_48h.csv" -o j1.csv || true
+          curl -fsSL --retry 3 "$base/noaa-21-viirs-c2/csv/J2_VIIRS_C2_South_America_48h.csv" -o j2.csv || true
+          curl -fsSL --retry 3 "$base/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_South_America_48h.csv" -o snpp.csv || true
+          curl -fsSL --retry 3 "$base/modis-c6.1/csv/MODIS_C6_1_South_America_48h.csv" -o modis.csv || true
+          python3 - << 'PY'
+          import csv, json, os, datetime
+          focos = []
+          for nombre, sat in [("j1.csv", "NOAA-20"), ("j2.csv", "NOAA-21"), ("snpp.csv", "Suomi NPP"), ("modis.csv", "MODIS")]:
+              if not os.path.exists(nombre) or os.path.getsize(nombre) < 100: continue
+              for r in csv.DictReader(open(nombre)):
+                  la, lo = float(r["latitude"]), float(r["longitude"])
+                  if -23.0 <= la <= -9.5 and -69.7 <= lo <= -57.4:   # Bolivia (rectángulo)
+                      focos.append({"lat": round(la, 4), "lon": round(lo, 4), "sat": sat,
+                                    "t": f'{r["acq_date"]}T{r["acq_time"].zfill(4)[:2]}:{r["acq_time"].zfill(4)[2:]}Z',
+                                    "conf": r.get("confidence", ""), "frp": float(r.get("frp") or 0)})
+          json.dump({"generado": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), "fuente": "NASA FIRMS (VIIRS y MODIS), últimas 48 h", "focos": focos},
+                    open("focos.json", "w"), separators=(",", ":"))
+          print(len(focos), "focos en Bolivia")
+          PY
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
+          git add focos.json
+          git diff --cached --quiet || git commit -m "Focos de calor $(date -u +%F\ %H:%M)"
+          git pull --rebase -q || true
+          git push
