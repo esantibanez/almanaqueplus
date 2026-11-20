@@ -15,6 +15,12 @@
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F4A21E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Almanaque Plus">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="lib/leaflet.css">
 <link rel="icon" type="image/png" href="favicon.png">
 <style>
@@ -98,7 +104,7 @@
   .glun { position:absolute; top:6px; right:6px; } .gcli { font-size:15px; } .gcli span { font-size:11.5px; color:var(--gris); margin-left:2px; }
   .gico { position:absolute; top:26px; right:5px; font-size:11px; } .gfer { font-size:10.5px; color:var(--rojo); font-weight:bold; line-height:1.15; }
   .grec { margin:0 -5px 0; text-align:center; font:11px Arial, sans-serif; padding:2px 0; border-radius:0 0 5px 5px; }
-  .ficha { display:none; position:fixed; inset:0; background:rgba(20,30,25,.55); z-index:50; align-items:center; justify-content:center; padding:12px; }
+  .ficha { display:none; position:fixed; inset:0; background:rgba(20,30,25,.55); z-index:2500; align-items:center; justify-content:center; padding:12px; }
   .ficha.on { display:flex; }
   .fcont { background:var(--papel); max-width:620px; width:100%; max-height:92vh; overflow-y:auto; border-radius:4px; padding:16px 18px; border-top:8px solid var(--naranja); outline:1px solid var(--tinta); outline-offset:-5px; }
   .fcab { display:flex; justify-content:space-between; align-items:flex-start; } .fn { font:700 24px "Playfair", Georgia, serif; color:var(--tinta); }
@@ -122,6 +128,17 @@
   .resbusca div { padding:4px 6px; cursor:pointer; border-bottom:1px dotted #cdbf9c; font-size:14px; } .resbusca div:hover { background:#FDE7BF; }
   .ubnota { font-size:12px; color:var(--gris); margin-top:8px; font-style:italic; }
   .mapaub { width:340px; height:210px; border:1px solid var(--tinta); border-radius:4px; flex-shrink:0; }
+  .binst { margin-top:8px; background:var(--tinta); color:var(--naranja); border-color:var(--tinta); font-weight:bold; }
+  .pwa { display:none; position:fixed; inset:0; background:rgba(20,18,14,.55); z-index:3000; align-items:flex-end; justify-content:center; padding:10px; }
+  .pwa.on { display:flex; }
+  .pwacont { background:var(--papel); max-width:460px; width:100%; border-radius:8px 8px 4px 4px; padding:18px 18px 14px; border-top:8px solid var(--naranja);
+    outline:1px solid var(--tinta); outline-offset:-5px; background-image:url(emblema.svg); background-repeat:no-repeat; background-size:64px; background-position:right 16px top 16px; }
+  .ptit { font:900 21px/1.15 "Playfair", Georgia, serif; margin:0 72px 8px 0; } .pwacont p { margin:6px 0 12px; }
+  .ppasos { padding-left:20px; margin:8px 0 12px; } .ppasos li { margin:4px 0; } .pico { border:1px solid var(--gris); border-radius:4px; padding:0 4px; }
+  .pbot { display:flex; gap:8px; justify-content:flex-end; } .pbot button { font-size:15px; padding:7px 16px; }
+  .pwaver { display:none; position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:2900; background:var(--tinta); color:#fff; border-radius:8px;
+    padding:9px 12px; gap:10px; align-items:center; box-shadow:0 4px 14px rgba(0,0,0,.35); width:max-content; max-width:94vw; font-size:14px; flex-wrap:wrap; }
+  .pwaver.on { display:flex; } .pwaver button { font-size:14px; } .pwaver button.prim { background:var(--naranja); color:var(--tinta); border-color:var(--naranja); }
   #cultivo option.ogrupo { font-weight:bold; background:#F3EAD3; } #cultivo option.ocult { font-weight:normal; }
   .lunar { background:var(--papel); border:1px solid var(--tinta); border-radius:6px; padding:10px 12px; margin:0 0 12px; }
   .ltit b { font:700 17px "Playfair", Georgia, serif; } .lsub { font-size:13px; color:var(--gris); margin:3px 0 6px; font-style:italic; }
@@ -161,7 +178,7 @@
   }
   @media print {
     header { background:none; color:#000; border-bottom:2px solid #000; padding:4px; } header img { width:44px; } header .sub { color:#333; }
-    .lchips, .lsub, .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
+    .binst, .pwa, .pwaver, .lchips, .lsub, .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
     body { background:#fff; font-size:11px; } main { padding:0; max-width:none; }
     th { background:#eee; color:#000; } td { font-size:10.5px; padding:3px; } td.num { font-size:15px; }
     tr { page-break-inside:avoid; } tr.hoy td { background:none !important; }
@@ -175,6 +192,7 @@
   <h1>Almanaque <span>Plus</span></h1>
   <div class="sub">Luna · sol · santoral · feriados · pronóstico de lluvia · siembra · satélites — <span id="lugarTxt">Roboré</span></div>
   <div class="marca">al estilo del clásico Bristol</div>
+  <div><button id="btnInstalar" class="binst" style="display:none">📲 Instalar en el teléfono</button></div>
 </header>
 <main>
   <div class="ubic">
@@ -235,14 +253,18 @@
     que pase el satélite no garantiza una imagen sin nubes. 
   </div>
 </main>
+<div id="pwa" class="pwa" role="dialog" aria-modal="true"><div id="pwaCont" class="pwacont"></div></div>
+<div id="pwaVersion" class="pwaver" role="status"><span>📰 Hay una <b>nueva edición</b> del almanaque.</span>
+  <button id="pwaActualizar" class="prim">Actualizar</button><button id="pwaLuego">Luego</button></div>
 <footer><b>Elaborado por: Eder Santibáñez</b><br>
 Fuentes: algoritmos astronómicos de J. Meeus · SunCalc · Open-Meteo · NORAD/CelesTrak · Decretos Supremos 2750 y 5521<br>
 <small>Proyecto independiente, inspirado en los almanaques tradicionales como el Almanaque Bristol. No está afiliado a Lanman &amp; Kemp-Barclay &amp; Co. ni a sus marcas.</small></footer>
+<script src="pwa.js?v=202611201532"></script>
 <script src="lib/leaflet.js"></script>
 <script src="lib/suncalc.js"></script>
 <script src="lib/satellite.min.js"></script>
-<script src="santoral.js?v=202611201525"></script>
-<script src="siembra.js?v=202611201525"></script>
-<script src="almanaque.js?v=202611201525"></script>
+<script src="santoral.js?v=202611201532"></script>
+<script src="siembra.js?v=202611201532"></script>
+<script src="almanaque.js?v=202611201532"></script>
 </body>
 </html>
