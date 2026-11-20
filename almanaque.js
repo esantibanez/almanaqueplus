@@ -154,7 +154,7 @@ async function cargarClima() {
       `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,et0_fao_evapotranspiration` +
       `&hourly=soil_moisture_9_to_27cm&timezone=${encodeURIComponent(ZONA)}&past_days=31&forecast_days=16`;
     const r = await fetch(u); if (!r.ok) return;
-    const j = await r.json(), D = j.daily, H = j.hourly || {}, sm = {};
+    const j = await r.json(), D = j.daily, H = j.hourly || {}, sm = {}; climaHora = new Date();
     (H.time || []).forEach((t, i) => { const v = H.soil_moisture_9_to_27cm[i]; if (v == null) return; const k = t.slice(0, 10); (sm[k] = sm[k] || []).push(v); });
     D.time.forEach((t, i) => { clima[t] = { cod: D.weather_code[i], max: D.temperature_2m_max[i], min: D.temperature_2m_min[i],
       lluvia: D.precipitation_sum[i], prob: D.precipitation_probability_max[i], viento: D.wind_speed_10m_max[i], et0: D.et0_fao_evapotranspiration[i],
@@ -168,12 +168,13 @@ const SATS = [
   { nombre: "Sentinel-2A", re: /^SENTINEL-2A\b/, franja: 290, corto: "S2A" }, { nombre: "Sentinel-2B", re: /^SENTINEL-2B\b/, franja: 290, corto: "S2B" },
   { nombre: "Sentinel-2C", re: /^SENTINEL-2C\b/, franja: 290, corto: "S2C" },
 ];
-let orbitasListas = false;
+let orbitasListas = false, orbitasFecha = null, climaHora = null;
 async function cargarOrbitas() {
   try {
     const r = await fetch("tles.txt?" + Math.floor(Date.now() / 3600000)); if (!r.ok) return;
     const l = (await r.text()).split(/\r?\n/).map(x => x.trim());
-    for (const s of SATS) { const i = l.findIndex(x => s.re.test(x)); if (i >= 0) s.satrec = satellite.twoline2satrec(l[i + 1], l[i + 2]); }
+    for (const s of SATS) { const i = l.findIndex(x => s.re.test(x)); if (i >= 0) { s.satrec = satellite.twoline2satrec(l[i + 1], l[i + 2]);
+      const yy = +l[i + 1].slice(18, 20), dd = +l[i + 1].slice(20, 32), ep = Date.UTC(2000 + yy, 0, 1) + (dd - 1) * 86400000; orbitasFecha = Math.max(orbitasFecha || 0, ep); } }
     orbitasListas = SATS.some(s => s.satrec);
   } catch (e) {}
 }
@@ -407,7 +408,7 @@ function renderCal() {
     const ci = x.cl ? (CLIMA[x.cl.cod] || ["", ""])[0] : "";
     const ico = (x.marcas.some(z => z.tipo === "ambiental") ? "🌱" : "") + (x.pas.length ? "🛰️" : "");
     h += `<div class="gdia ${x.dom ? "dom" : ""} ${x.fer ? "fer" : ""} ${x.hoy ? "hoy" : ""}" data-d="${x.d}" tabindex="0" role="button" aria-label="${x.d} de ${NOMBRE_MES[mes]}">
-      <div class="gnum">${x.d}</div><div class="glun">${lunaSVG(x.il.fraction, x.cre, 16)}</div>
+      <div class="gnum">${x.d}<button class="ginfo" data-i="${x.d}" title="¿De dónde salen estos datos?" aria-label="Origen de los datos del día ${x.d}">i</button></div><div class="glun">${lunaSVG(x.il.fraction, x.cre, 16)}</div>
       <div class="gcli">${ci}${x.cl ? `<span>${Math.round(x.cl.max)}°</span>` : ""}</div>
       <div class="gico">${ico}</div>
       ${x.fer ? `<div class="gfer">${x.marcas.find(z => z.tipo === "feriado").txt}</div>` : ""}
@@ -417,6 +418,7 @@ function renderCal() {
       <div class="grec e-${x.rec.estado}">${x.rec.corto}</div></div>`;
   }
   document.getElementById("vista").innerHTML = h + "</div>";
+  document.querySelectorAll(".ginfo").forEach(b => b.onclick = e => { e.stopPropagation(); info(+b.dataset.i); });
   document.querySelectorAll(".gdia").forEach(el => { const go = () => ficha(+el.dataset.d); el.onclick = go; el.onkeydown = e => { if (e.key === "Enter") go(); }; });
 }
 function renderLista() {
@@ -425,7 +427,7 @@ function renderLista() {
   for (const x of diasMes) {
     const cl = x.cl, fz = x.fz;
     html += `<tr class="${x.dom ? "dom" : ""} ${x.fer ? "fer" : ""} ${x.hoy ? "hoy" : ""}" data-d="${x.d}">
-      <td class="num">${x.d}<div class="dsem">${fmt(x.f, { weekday: "short" }).replace(".", "")}</div></td>
+      <td class="num">${x.d}<button class="ginfo" data-i="${x.d}" title="¿De dónde salen estos datos?">i</button><div class="dsem">${fmt(x.f, { weekday: "short" }).replace(".", "")}</div></td>
       <td class="santo">${x.santo}${x.marcas.map(marcaHTML).join("")}</td>
       <td class="sol">${hora(x.sol.sunrise)}<br>${hora(x.sol.sunset)}<div class="dur">${Math.floor(x.durMin / 60)} h ${Math.round(x.durMin % 60)} min</div></td>
       <td class="lun">${lunaSVG(x.il.fraction, x.cre)}<div>${fz ? `<b>${FASES[fz.tipo][0]}</b> ${hora(fz.t)}` : `${nombreFase(x.il.fraction, x.cre)} ${Math.round(x.il.fraction * 100)} %`}</div>
@@ -436,6 +438,7 @@ function renderLista() {
       <td class="sat">${x.pas.map(p => `<div><b>${p.s.nombre}</b> ${hora(p.t)}</div>`).join("")}</td></tr>`;
   }
   document.getElementById("vista").innerHTML = html + "</tbody></table>";
+  document.querySelectorAll("#vista .ginfo").forEach(b => b.onclick = e => { e.stopPropagation(); info(+b.dataset.i); });
   document.querySelectorAll("#vista tr[data-d]").forEach(el => el.onclick = () => ficha(+el.dataset.d));
 }
 // ---- Ficha completa de un día -----------------------------------------------------
@@ -466,9 +469,44 @@ function fichaHTML(x, modal) {
       · lluvia ${cl.lluvia.toFixed(1)} mm${cl.prob != null ? ` (prob. ${cl.prob} %)` : ""} · viento ${Math.round(cl.viento)} km/h
       ${cl.et0 != null ? `· evaporación ${cl.et0.toFixed(1)} mm` : ""}${cl.suelo != null ? ` · humedad del suelo ${(cl.suelo * 100).toFixed(0)} %` : ""}` :
       "Sin datos: hay datos del último mes y pronóstico de los próximos 16 días."}</div>
+    <div class="fbloque"><button class="binfo" onclick="info(${x.d})">ⓘ ¿De dónde salen estos datos?</button></div>
     <div class="fbloque"><b>🛰️ Satélites</b> ${x.pas.length ? x.pas.map(p => `${p.s.nombre} a las ${hora(p.t)}`).join(" · ") : "Ninguna pasada de Landsat o Sentinel-2 sobre el lugar."}</div>`;
 }
 function ficha(d) { document.getElementById("fichaCont").innerHTML = fichaHTML(diasMes[d - 1], true); document.getElementById("ficha").classList.add("on"); }
+// ---- ¿De dónde salen estos datos? ------------------------------------------------------------
+function fuenteCalendario(id, act) {
+  const C = CULTIVOS[id];
+  if (act === "riego") return `lluvia y evaporación de Open-Meteo (método FAO-56) con un coeficiente de consumo del cultivo (${C.kc}) de guía general`;
+  if (act === "poda") return C.poda ? "guía general de manejo, por verificar con productores" : "práctica del cultivo (no se poda)";
+  const S = act === "siembra" ? C.siembra : C.trasplante;
+  if (!S) return "práctica del cultivo (forma de propagación)";
+  return S.fuente ? `<a href="${S.fuente.url}" target="_blank" rel="noopener">${S.fuente.corto}</a>` : "guía general, <b>sin fuente publicada</b> para la Chiquitanía (por verificar con productores)";
+}
+function infoHTML(x) {
+  const ahora = new Date(), L = lugar, act = ACTIVIDADES[actividad].toLowerCase();
+  const dias = x ? Math.round((new Date(x.iso + "T12:00:00") - new Date(hoyISO() + "T12:00:00")) / 86400000) : null;
+  const tipoClima = !x ? "" : dias < 0 ? "estimación para un día ya pasado (no es una medición de estación)" : dias === 0 ? "pronóstico para hoy" : `pronóstico con ${dias} día${dias > 1 ? "s" : ""} de anticipación`;
+  const calendario = idsDe(cultivo).map(id => `<li><b>${CULTIVOS[id].nombre}:</b> ${fuenteCalendario(id, actividad)}</li>`).join("");
+  return `<div class="fcab"><div><div class="hd">Origen de los datos</div><div class="fn">${x ? `${fmt(x.f, { weekday: "long" })} ${x.d} de ${NOMBRE_MES[x.m].toLowerCase()} de ${x.a}` : "Todo el almanaque"}</div></div>
+      <button class="cerrar" onclick="cerrarFicha()" aria-label="Cerrar">✕</button></div>
+    <dl class="info">
+      <dt>📅 Fecha y hora</dt><dd>Reloj de su teléfono o computadora (ahora: ${fmt(ahora, { day: "numeric", month: "long", year: "numeric" })}, ${hora(ahora)}). Todas las horas se muestran en hora de Bolivia (UTC−4).</dd>
+      <dt>📍 Lugar</dt><dd><b>${L.nombre}</b>${L.detalle ? ` · ${L.detalle}` : ""} · ${L.lat.toFixed(4)}, ${L.lon.toFixed(4)}<br>Origen: ${L.fuente || "lugar predeterminado del almanaque (Roboré)"}.</dd>
+      ${x && x.rec ? `<dt>🌱 ${nombreSel(cultivo)} · ${act}: <span class="chip e-${x.rec.estado}">${x.rec.corto}</span></dt>
+        <dd>${x.rec.titulo}.${x.rec.certeza ? ` Certeza <b>${NIV[x.rec.certeza.n].toLowerCase()}</b> (${x.rec.certeza.txt}).` : ""}
+        <br>La recomendación combina:<ol><li><b>Época del año</b> según el calendario del cultivo:<ul>${calendario}</ul></li>
+        <li><b>Lluvia y humedad del suelo</b> de los días cercanos (ver «Clima»), cuando hay datos.</li>
+        <li>La <b>tradición lunar</b> se muestra aparte y no cambia la recomendación.</li></ol></dd>` :
+        `<dt>🌱 Siembra, trasplante, poda y riego</dt><dd>Calendario por cultivo:<ul>${calendario}</ul>más la lluvia y la humedad del suelo de Open-Meteo.</dd>`}
+      <dt>🌦️ Clima</dt><dd>${climaHora ? `<a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, consultado hoy a las ${hora(climaHora)} para las coordenadas del lugar. Combina varios modelos meteorológicos (ECMWF, GFS, ICON y otros) en una cuadrícula de pocos kilómetros: no es una estación en el lugar.` : "No se pudo consultar Open-Meteo (sin internet o servicio no disponible)."}
+        ${x ? (x.cl ? `<br>Para este día: ${tipoClima}.` : "<br>Para este día no hay datos: se cubre el último mes y los próximos 16 días.") : "<br>Cubre los últimos 31 días y los próximos 16."}</dd>
+      <dt>☀️ Sol y 🌙 luna</dt><dd>Calculados en su dispositivo para las coordenadas del lugar: salida y puesta con SunCalc; fases de la luna y estaciones con los algoritmos astronómicos de Jean Meeus (precisión de minutos).</dd>
+      <dt>⛪ Santoral</dt><dd>Santo o fiesta principal del calendario católico (fiestas fijas); las fiestas móviles se calculan a partir de la fecha de Pascua.</dd>
+      <dt>🇧🇴 Feriados</dt><dd>Decreto Supremo 2750 y traslados del Decreto Supremo 5521 (2026). Los traslados de otros años se agregan cuando el Gobierno los publica.</dd>
+      <dt>🛰️ Satélites</dt><dd>${orbitasFecha ? `Órbitas oficiales NORAD/CelesTrak del ${fmt(new Date(orbitasFecha), { day: "numeric", month: "long", year: "numeric" })} (se actualizan a diario), calculadas en su dispositivo con el modelo SGP4.` : "No se pudieron cargar las órbitas."}</dd>
+    </dl>`;
+}
+function info(d) { document.getElementById("fichaCont").innerHTML = infoHTML(d ? diasMes[d - 1] : null); document.getElementById("ficha").classList.add("on"); }
 function cerrarFicha() { document.getElementById("ficha").classList.remove("on"); }
 // ---- ¿Hay humedad para sembrar? ------------------------------------------------------
 function renderHumedad() {
@@ -530,7 +568,7 @@ async function nombreDe(lat, lon) {   // nombre del lugar a partir de las coorde
   return { nombre: "Punto elegido", detalle: "" };
 }
 async function ponerLugar(l, opc = {}) {
-  lugar = { nombre: l.nombre, lat: l.lat, lon: l.lon, detalle: l.detalle || "" };
+  lugar = { nombre: l.nombre, lat: l.lat, lon: l.lon, detalle: l.detalle || "", fuente: l.fuente || "" };
   marcaUb.setLatLng([l.lat, l.lon]);
   if (circuloUb) { mapaUb.removeLayer(circuloUb); circuloUb = null; }
   if (opc.precision) circuloUb = L.circle([l.lat, l.lon], { radius: opc.precision, color: "#C77A0A", weight: 1, fillOpacity: 0.12 }).addTo(mapaUb);
@@ -547,15 +585,16 @@ function usarGPS(silencioso) {
   navigator.geolocation.getCurrentPosition(async g => {
     const lat = g.coords.latitude, lon = g.coords.longitude, n = await nombreDe(lat, lon);
     b.textContent = "📍 Usar mi ubicación"; b.disabled = false;
-    await ponerLugar({ nombre: n.nombre, detalle: n.detalle ? `Su ubicación · ${n.detalle}` : "Su ubicación", lat, lon }, { precision: g.coords.accuracy, zoom: 13 });
+    await ponerLugar({ nombre: n.nombre, detalle: n.detalle ? `Su ubicación · ${n.detalle}` : "Su ubicación", lat, lon,
+      fuente: `GPS de su dispositivo (precisión ± ${Math.round(g.coords.accuracy)} m); nombre del lugar: BigDataCloud` }, { precision: g.coords.accuracy, zoom: 13 });
   }, e => {
     b.textContent = "📍 Usar mi ubicación"; b.disabled = false;
     if (!silencioso) alert(e.code === 1 ? "No dio permiso para usar su ubicación. Puede activarlo en el candado de la barra de direcciones, o buscar su ciudad." : "No se pudo obtener su ubicación. Intente de nuevo o busque su ciudad.");
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 });
 }
 document.getElementById("btnGeo").onclick = () => usarGPS(false);
-document.getElementById("lugar").onchange = e => { const l = LUGARES[e.target.value]; if (l) ponerLugar({ ...l, detalle: "Santa Cruz, Bolivia" }, { zoom: 11 }); e.target.value = ""; };
-mapaUb.on("click", async e => { const n = await nombreDe(e.latlng.lat, e.latlng.lng); ponerLugar({ nombre: n.nombre, detalle: n.detalle, lat: e.latlng.lat, lon: e.latlng.lng }, { zoom: mapaUb.getZoom() }); });
+document.getElementById("lugar").onchange = e => { const l = LUGARES[e.target.value]; if (l) ponerLugar({ ...l, detalle: "Santa Cruz, Bolivia", fuente: "Lista de lugares frecuentes (coordenadas del centro del pueblo)" }, { zoom: 11 }); e.target.value = ""; };
+mapaUb.on("click", async e => { const n = await nombreDe(e.latlng.lat, e.latlng.lng); ponerLugar({ nombre: n.nombre, detalle: n.detalle, lat: e.latlng.lat, lon: e.latlng.lng, fuente: "Punto tocado en el mapa; nombre del lugar: BigDataCloud" }, { zoom: mapaUb.getZoom() }); });
 document.getElementById("busca").onsubmit = async e => {
   e.preventDefault();
   const q = document.getElementById("buscaTxt").value.trim(), res = document.getElementById("resBusca");
@@ -566,7 +605,7 @@ document.getElementById("busca").onsubmit = async e => {
     if (!L2.length) { res.textContent = "No se encontró ese lugar."; return; }
     res.innerHTML = L2.map((x, i) => `<div data-i="${i}">${x.name} <small>· ${[x.admin2, x.admin1, x.country].filter(Boolean).join(", ")}</small></div>`).join("");
     res.querySelectorAll("div").forEach(el => el.onclick = () => { const x = L2[+el.dataset.i]; res.innerHTML = "";
-      ponerLugar({ nombre: x.name, detalle: [x.admin1, x.country].filter(Boolean).join(", "), lat: x.latitude, lon: x.longitude }, { zoom: 11 }); });
+      ponerLugar({ nombre: x.name, detalle: [x.admin1, x.country].filter(Boolean).join(", "), lat: x.latitude, lon: x.longitude, fuente: "Buscador de lugares (Open-Meteo Geocoding, basado en GeoNames)" }, { zoom: 11 }); });
   } catch (err) { res.textContent = "No se pudo buscar ahora. Intente de nuevo."; }
 };
 document.getElementById("imprimir").onclick = () => window.print();

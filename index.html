@@ -171,6 +171,13 @@
   .pwaver { display:none; position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:2900; background:var(--oscuro); color:#fff; border-radius:8px;
     padding:9px 12px; gap:10px; align-items:center; box-shadow:0 4px 14px rgba(0,0,0,.35); width:max-content; max-width:94vw; font-size:0.875rem; flex-wrap:wrap; }
   .pwaver.on { display:flex; } .pwaver button { font-size:0.875rem; } .pwaver button.prim { background:var(--naranja); color:var(--tinta); border-color:var(--naranja); }
+  .ginfo { font:italic 700 0.72rem Georgia, serif; width:1.15rem; height:1.15rem; padding:0; border-radius:50%; margin-left:4px; vertical-align:middle;
+    border:1px solid var(--gris); color:var(--gris); background:transparent; line-height:1; }
+  .ginfo:hover { background:var(--naranja); color:#1d1a16; border-color:var(--naranja); }
+  td.num .ginfo { display:block; margin:2px auto; }
+  .binfo { font-size:0.85rem; }
+  dl.info { margin:8px 0 0; font-size:0.9rem; } dl.info dt { font-weight:700; margin-top:10px; } dl.info dd { margin:2px 0 0 0; padding-left:1.6em; }
+  dl.info ul, dl.info ol { margin:4px 0; padding-left:1.3em; }
   #cultivo option.ogrupo { font-weight:bold; background:var(--crema); } #cultivo option.ocult { font-weight:normal; }
   .lunar { background:var(--papel); border:1px solid var(--tinta); border-radius:6px; padding:10px 12px; margin:0 0 12px; }
   .ltit b { font:700 1.062rem "Texto", "Segoe UI", Roboto, Arial, sans-serif; } .lsub { font-size:0.8125rem; color:var(--gris); margin:3px 0 6px; font-style:italic; }
@@ -212,7 +219,7 @@
   @media print {
     html, html[data-tema="oscuro"] { --crema:#fff; --papel:#fff; --blanco:#fff; --tinta:#000; --verde:#000; --gris:#444; --linea:#bbb; --oscuro:#000; font-size:100%; }
     header { background:none; color:#000; border-bottom:2px solid #000; padding:4px; } header img { width:44px; } header .sub { color:#333; }
-    .ajustes, .binst, .pwa, .pwaver, .lchips, .lsub, .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
+    .ginfo, #btnFuentes, .ajustes, .binst, .pwa, .pwaver, .lchips, .lsub, .ubic, #hoy, .barra button, .barra select, .derecha, .metodo, #notaSat:empty, .hsel select, .vistas, .humedad, .ficha { display:none !important; }
     body { background:var(--blanco); font-size:0.6875rem; } main { padding:0; max-width:none; }
     th { background:#eee; color:#000; } td { font-size:0.6562rem; padding:3px; } td.num { font-size:0.9375rem; }
     tr { page-break-inside:avoid; } tr.hoy td { background:none !important; }
@@ -251,6 +258,7 @@
     <span class="vistas"><button id="v_dia" class="act">Día</button><button id="v_semana">Semana</button><button id="v_mes">Mes</button><button id="v_lista">📋 Lista</button></span>
     <div class="derecha">
 
+      <button id="btnFuentes" onclick="info(null)">ⓘ Fuentes de los datos</button>
       <button id="imprimir">🖨 Imprimir mes</button>
     </div>
   </div>
@@ -285,7 +293,7 @@
     <b>Huerta y chaco:</b> la recomendación combina tres fuentes, cada una con su nivel de certeza:
     (1) un calendario de siembra por cultivo: maíz, frejol, arroz y yuca se basan en fuentes publicadas para Santa Cruz (CIAB, FAO, COSUDE, FENCA, CIAT), que se enlazan en la ficha de cada día (certeza media); papaya usa una ficha técnica general; el resto de los cultivos (hortalizas, cítricos, frutales, plátanos, cucurbitáceas, camote y walusa) son una guía general aún por verificar con productores de la zona (certeza baja);
     (2) la lluvia, la evaporación y la humedad del suelo del último mes y del pronóstico de 16 días (certeza alta para días ya ocurridos y los próximos 3, media hasta una semana, baja después);
-    (3) la tradición de sembrar y podar según la luna, que se muestra aparte porque no tiene respaldo científico. <b>Siembra y trasplante:</b> en los cultivos que se hacen en almácigo o vivero (hortalizas como tomate, pimentón, ají, lechuga, cebolla y repollo; frutales y cítricos), "Siembra" es poner la semilla en el almácigo y "Trasplante" es llevar el plantín al terreno; los cultivos de siembra directa (granos, zanahoria, sandía, yuca…) no se trasplantan, y los que se propagan por hijuelos (plátano, guineo, piña) solo tienen trasplante. Al elegir un grupo entero (por ejemplo, todos los cítricos) se muestra cuántos cultivos del grupo están en cada situación y la ficha del día detalla cada uno. Es una orientación: la decisión final es de quien trabaja la tierra.
+    (3) la tradición de sembrar y podar según la luna, que se muestra aparte porque no tiene respaldo científico. <b>Siembra y trasplante:</b> en las hortalizas de almácigo (tomate, pimentón, ají, lechuga, cebolla y repollo), "Siembra" es poner la semilla en el almácigo y "Trasplante" es llevar el plantín al terreno; en frutales y cítricos, "sembrar" y "trasplantar" significan plantar el plantín en el terreno (la semilla en vivero se puede poner todo el año); los cultivos de siembra directa (granos, zanahoria, sandía, yuca…) no se trasplantan, y los que se propagan por hijuelos (plátano, guineo, piña) solo tienen trasplante. Al elegir un grupo entero (por ejemplo, todos los cítricos) se muestra cuántos cultivos del grupo están en cada situación y la ficha del día detalla cada uno. Toque <b>ⓘ</b> en cualquier día, o «Fuentes de los datos», para ver de dónde sale cada dato. Es una orientación: la decisión final es de quien trabaja la tierra.
     <b>Calendario lunar tradicional:</b> recoge las costumbres de los almanaques populares para la huerta y la pesca (abonar en luna nueva, sembrar plantas de altura en cuarto creciente, cosechar en luna llena, sembrar raíces y podar en cuarto menguante, pescar cerca de la luna nueva). Las fechas se calculan con la fase real de la luna para cada mes; es saber popular, no una recomendación técnica.
     <b>Satélites:</b> pasadas diurnas de Landsat 8 y 9 y Sentinel-2 sobre el lugar, calculadas con sus órbitas oficiales;
     que pase el satélite no garantiza una imagen sin nubes. 
@@ -297,12 +305,12 @@
 <footer><b>Elaborado por: Eder Santibáñez</b><br>
 Fuentes: algoritmos astronómicos de J. Meeus · SunCalc · Open-Meteo · NORAD/CelesTrak · Decretos Supremos 2750 y 5521<br>
 <small>Proyecto independiente, inspirado en los almanaques tradicionales como el Almanaque Bristol. No está afiliado a Lanman &amp; Kemp-Barclay &amp; Co. ni a sus marcas.</small></footer>
-<script src="pwa.js?v=202611201540"></script>
+<script src="pwa.js?v=202611201547"></script>
 <script src="lib/leaflet.js"></script>
 <script src="lib/suncalc.js"></script>
 <script src="lib/satellite.min.js"></script>
-<script src="santoral.js?v=202611201540"></script>
-<script src="siembra.js?v=202611201540"></script>
-<script src="almanaque.js?v=202611201540"></script>
+<script src="santoral.js?v=202611201547"></script>
+<script src="siembra.js?v=202611201547"></script>
+<script src="almanaque.js?v=202611201547"></script>
 </body>
 </html>

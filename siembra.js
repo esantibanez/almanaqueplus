@@ -128,9 +128,8 @@ for (const [id, C] of Object.entries(CULTIVOS)) {
       vivero: true, fuente: C.siembra.fuente, nota: "Siembra de la semilla en almácigo (cajón o platabanda protegida), unas 4 a 6 semanas antes del trasplante." };
   } else if (VIVERO.includes(id)) {
     C.trasplante = Object.assign({}, C.siembra, { nota: `Plantación del plantín en el terreno definitivo. ${C.siembra.nota}` });
-    C.siembra = id === "papaya"
-      ? { principal: corre(C.siembra.principal, -2), secundaria: corre(C.siembra.secundaria, -2), vivero: true, fuente: C.siembra.fuente, nota: "Siembra de la semilla en bolsas o semillero, unas 6 a 8 semanas antes del trasplante." }
-      : { principal: [], secundaria: TODO, vivero: true, nota: `Siembra de la semilla en vivero o bolsas, con sombra y riego: se puede todo el año. El plantín tarda varios meses en estar listo${CITRICOS.includes(id) ? "; los cítricos, además, se injertan sobre un patrón resistente antes de llevarlos al terreno" : ""}.` };
+    // En frutales y cítricos, "sembrar" es plantar el plantín en el terreno: mismo calendario que el trasplante.
+    C.siembra = Object.assign({}, C.siembra, { nota: `${C.siembra.nota} Para frutales, «sembrar» es plantar el plantín en el terreno. La semilla en vivero o bolsas se puede poner todo el año, con sombra y riego${CITRICOS.includes(id) ? "; los cítricos, además, se injertan sobre un patrón resistente antes de llevarlos al terreno" : ""}.` });
   } else if (HIJUELO.includes(id)) {
     C.trasplante = Object.assign({}, C.siembra);
     C.siembra = null; C.siembraNota = `${C.nombre}: se propaga por hijuelos${id === "pina" ? " o coronas" : ""}, no por semilla. Vea la actividad Trasplante.`;
