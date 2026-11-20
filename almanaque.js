@@ -442,7 +442,7 @@ function fichaHTML(x, modal) {
       <div class="rtit">${C.nombre} · ${ACTIVIDADES[actividad].toLowerCase()}</div>
       <div class="rest">${R.titulo}</div>
       <div class="rcert">${certeza}</div>
-      <ul>${R.razones.map(z => `<li class="${z.nota ? "nota" : ""}">${z.t} <small>(${z.f})</small></li>`).join("")}</ul>
+      <ul>${R.razones.map(z => `<li class="${z.nota ? "nota" : ""}">${z.t} <small>(${z.url ? `<a href="${z.url}" target="_blank" rel="noopener">${z.f}</a>` : z.f})</small></li>`).join("")}</ul>
       ${R.tradicion ? `<div class="trad">🌙 <b>Tradición popular</b> <span class="nivel ntrad">sin respaldo científico</span><br>${R.tradicion.txt}</div>` : ""}
       ${otras ? `<div class="otras">${otras}</div>` : ""}
     </div>

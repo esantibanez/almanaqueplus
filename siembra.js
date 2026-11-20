@@ -1,20 +1,28 @@
 /* Recomendaciones de siembra, poda y riego para la ecorregión chiquitana.
-   Combina: (1) calendario regional por cultivo, (2) lluvia, evapotranspiración y humedad del suelo
+   Combina: (1) calendario por cultivo (con su fuente, o marcado "por verificar"), (2) lluvia, evapotranspiración y humedad del suelo
    (Open-Meteo: días pasados y pronóstico) y (3) la tradición lunar, que se muestra aparte.
    >>> El calendario de cultivos se puede ajustar con la experiencia de productores locales: editar CULTIVOS. <<< */
 "use strict";
 const TODO = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+// Fuentes consultadas (nov. 2026). Un cultivo sin "fuente" queda como guía general por verificar.
+const F_MAIZ = { corto: "CIAB / Agrosinergia; FAO GIEWS", url: "https://agrosinergia.com.bo/la-mejor-epoca-para-la-siembra-de-verano-es-del-15-de-noviembre-al-15-de-diciembre/" };
+const F_YUCA = { corto: "CIAT Santa Cruz (Publiagro)", url: "https://publiagro.com.bo/2019/02/cultivo-de-la-yuca/" };
+const F_FREJOL = { corto: "COSUDE, Latin Brief 1/2016; CAO (Publiagro)", url: "https://www.eda.admin.ch/dam/deza/en/documents/publikationen/briefing-papers/Latin-Brief-1-2016_EN.pdf" };
+const F_PAPAYA = { corto: "Ficha técnica general (MIDA Panamá), no específica de la Chiquitanía", url: "https://mida.gob.pa/wp-content/uploads/2021/08/Ficha-Papaya-2021.pdf" };
 const CULTIVOS = {
   yuca: { nombre: "Yuca", raiz: true, kc: 0.8,
-    siembra: { principal: [10, 11, 12], secundaria: [1, 2], nota: "Se planta por estacas (trozos de tallo de 20–25 cm) con el inicio de las lluvias, para que enraíce antes de la época seca." },
+    siembra: { principal: [5, 6, 7, 8], secundaria: [1, 2, 3, 4, 9, 10, 11, 12], fuente: F_YUCA,
+      nota: "En Santa Cruz la yuca se siembra tradicionalmente de mayo a agosto, por estacas (trozos de tallo). El CIAT recomienda escalonar la siembra cada uno o dos meses para tener cosecha todo el año." },
     poda: null, podaNota: "La yuca no se poda. Los tallos se cortan en la cosecha y se guardan como estacas para la próxima siembra.",
     riegoNota: "Resiste bien la sequía; el riego ayuda sobre todo en los primeros 2 a 3 meses." },
   maiz: { nombre: "Maíz", kc: 1.1,
-    siembra: { principal: [11, 12], secundaria: [10, 1], nota: "Siembra de verano con el suelo ya húmedo. Conviene que la floración (unos 55–70 días después) no caiga en un veranillo." },
+    siembra: { principal: [11, 12], secundaria: [10, 5], fuente: F_MAIZ,
+      nota: "Siembra de verano de octubre a fines de diciembre; la época ideal en Santa Cruz es del 15 de noviembre al 15 de diciembre. Hay una segunda campaña (invierno) sembrada en mayo, con más riesgo de sequía. Conviene que la floración no caiga en un veranillo." },
     poda: null, podaNota: "El maíz no se poda.",
     riegoNota: "El momento más crítico de agua es la floración y el llenado del grano." },
   frejol: { nombre: "Frejol", kc: 1.05,
-    siembra: { principal: [3, 4, 5], secundaria: [2], nota: "En las tierras bajas de Santa Cruz se siembra al final de las lluvias, con la humedad que queda en el suelo. Mucha lluvia en la floración trae enfermedades." },
+    siembra: { principal: [4, 5], secundaria: [3, 6], fuente: F_FREJOL,
+      nota: "En las llanuras de Santa Cruz el frejol es cultivo de la campaña de invierno: se siembra al final de las lluvias, con la humedad que queda en el suelo. Mucha lluvia en la floración trae enfermedades." },
     poda: null, podaNota: "El frejol no se poda.",
     riegoNota: "Necesita agua pareja en floración y llenado de vainas; el encharcamiento lo daña." },
   sandia: { nombre: "Sandía", kc: 1.0,
@@ -26,7 +34,8 @@ const CULTIVOS = {
     poda: { meses: TODO, nota: "Poda de guías (despunte) para ordenar la planta, en días secos." },
     riegoNota: "Regar al pie; cortar el riego unos días antes de cosechar mejora el sabor." },
   papaya: { nombre: "Papaya", kc: 1.0,
-    siembra: { principal: [10, 11, 12], secundaria: [1, 2], nota: "Trasplante de plantines al inicio de las lluvias; con riego se puede todo el año. No tolera el encharcamiento: plantar en terreno con buen drenaje." },
+    siembra: { principal: [10, 11, 12], secundaria: [1, 2], fuente: F_PAPAYA,
+      nota: "Trasplante de plantines al inicio de las lluvias; con riego se puede todo el año. No tolera el encharcamiento: plantar en terreno con buen drenaje." },
     poda: { meses: TODO, nota: "Deshoje de hojas secas o enfermas y raleo de frutos, en días secos." },
     riegoNota: "Riego frecuente en época seca, sin encharcar." },
   platano: { nombre: "Plátano", kc: 1.1,
@@ -75,13 +84,16 @@ function recomendar(cultivoId, actividad, iso, clima, hoyISO, luna) {
 
   if (actividad === "siembra") {
     const S = C.siembra, enPrin = S.principal.includes(mes), enSec = S.secundaria.includes(mes), conRiego = (S.conRiego || []).includes(mes);
-    r.razones.push({ t: enPrin ? `Mes de siembra principal de ${C.nombre.toLowerCase()} en la Chiquitanía.` : enSec ? `Mes de siembra posible (secundario)${conRiego ? ", solo con riego" : ""}.` : "Fuera de la época habitual de siembra en la Chiquitanía.", f: "Calendario regional", n: 1 });
-    r.razones.push({ t: S.nota, f: "Calendario regional", n: 1, nota: true });
-    if (!enPrin && !enSec) { r.estado = "fuera"; r.corto = "Fuera de época"; r.titulo = "No es época de siembra"; r.certeza = { n: 1, txt: "calendario regional" }; return r; }
+    const fu = S.fuente ? S.fuente.corto : "Guía general, por verificar", url = S.fuente ? S.fuente.url : null, nCal = S.fuente ? 1 : 0;
+    const txtCal = S.fuente ? "calendario con fuente" : "guía general por verificar";
+    r.razones.push({ t: enPrin ? `Mes de siembra principal de ${C.nombre.toLowerCase()} en Santa Cruz.` : enSec ? `Mes de siembra posible (secundario)${conRiego ? ", solo con riego" : ""}.` : "Fuera de la época habitual de siembra.", f: fu, url, n: nCal });
+    r.razones.push({ t: S.nota, f: fu, url, n: nCal, nota: true });
+    if (!S.fuente) r.razones.push({ t: "Estos meses no tienen todavía una fuente publicada para la Chiquitanía: conviene confirmarlos con productores de la zona.", f: "Aviso", n: 0, nota: true });
+    if (!enPrin && !enSec) { r.estado = "fuera"; r.corto = "Fuera de época"; r.titulo = "No es época de siembra"; r.certeza = { n: nCal, txt: txtCal }; return r; }
     if (!hayClima || ll10.n < 8) {
       r.estado = enPrin ? "bien" : "posible"; r.corto = enPrin ? "Época" : "Posible";
       r.titulo = enPrin ? "Época de siembra (sin datos de lluvia para este día)" : "Siembra posible (sin datos de lluvia para este día)";
-      r.certeza = { n: 1, txt: "solo calendario regional: sin datos de lluvia ni humedad para esta fecha" }; return r;
+      r.certeza = { n: nCal, txt: `solo ${txtCal}: sin datos de lluvia ni humedad para esta fecha` }; return r;
     }
     const humedo = ll10.s >= 30 || (suelo != null && suelo >= 0.22), medio = ll10.s >= 15 || (suelo != null && suelo >= 0.17);
     const fuerte = prox2.s >= 50;
@@ -92,17 +104,17 @@ function recomendar(cultivoId, actividad, iso, clima, hoyISO, luna) {
     else if (humedo) { r.estado = enPrin ? "bien" : "posible"; r.corto = enPrin ? "Sembrar" : "Posible"; r.titulo = enPrin ? "Buen momento para sembrar: hay humedad" : "Siembra posible: hay humedad"; }
     else if (medio) { r.estado = "posible"; r.corto = "Posible"; r.titulo = "Humedad justa: sembrar con apoyo de riego o esperar otra lluvia"; }
     else { r.estado = "no"; r.corto = "Seco"; r.titulo = "Suelo seco: esperar lluvias o regar antes de sembrar"; }
-    // la lluvia fuerte o la sequía son datos firmes; "buen momento" depende además del calendario regional (máximo: Media)
-    r.certeza = { n: (fuerte || !medio) ? cc.n : Math.min(1, cc.n), txt: `${cc.txt}${(fuerte || !medio) ? "" : " + calendario regional"}` };
+    // la lluvia fuerte o la sequía son datos firmes; "buen momento" depende además del calendario (máximo: Media; Baja si no tiene fuente)
+    r.certeza = { n: (fuerte || !medio) ? cc.n : Math.min(nCal, cc.n), txt: `${cc.txt}${(fuerte || !medio) ? "" : ` + ${txtCal}`}` };
     return r;
   }
 
   if (actividad === "poda") {
     if (!C.poda) { r.estado = "na"; r.corto = "No aplica"; r.titulo = C.podaNota.split(".")[0]; r.razones.push({ t: C.podaNota, f: "Manejo del cultivo", n: 2 }); r.certeza = { n: 2, txt: "práctica del cultivo" }; return r; }
     const enMes = C.poda.meses.includes(mes);
-    r.razones.push({ t: C.poda.nota, f: "Calendario regional", n: 1, nota: true });
-    if (!enMes) { r.estado = "fuera"; r.corto = "Fuera de época"; r.titulo = "No es época de poda"; r.razones.unshift({ t: "Fuera de la época recomendada de poda.", f: "Calendario regional", n: 1 }); r.certeza = { n: 1, txt: "calendario regional" }; return r; }
-    if (!hayClima) { r.estado = "posible"; r.corto = "Época"; r.titulo = "Época de poda (sin pronóstico para este día)"; r.certeza = { n: 1, txt: "solo calendario regional" }; return r; }
+    r.razones.push({ t: C.poda.nota, f: "Guía general, por verificar", n: 1, nota: true });
+    if (!enMes) { r.estado = "fuera"; r.corto = "Fuera de época"; r.titulo = "No es época de poda"; r.razones.unshift({ t: "Fuera de la época recomendada de poda.", f: "Guía general, por verificar", n: 1 }); r.certeza = { n: 0, txt: "guía general por verificar" }; return r; }
+    if (!hayClima) { r.estado = "posible"; r.corto = "Época"; r.titulo = "Época de poda (sin pronóstico para este día)"; r.certeza = { n: 0, txt: "solo la guía general (por verificar)" }; return r; }
     const hoyLl = c.lluvia || 0, prob = c.prob ?? 0, siguientes = suma(clima, iso, 1, 2, "lluvia").s;
     r.razones.push({ t: `Lluvia del día: ${hoyLl.toFixed(1)} mm (probabilidad ${prob} %) · en los dos días siguientes: ${siguientes.toFixed(1)} mm.`, f: "Open-Meteo", n: cc.n });
     if (hoyLl >= 5 || siguientes >= 10 || prob >= 60) { r.estado = "no"; r.corto = "Lluvia"; r.titulo = "No conviene: con lluvia los cortes se infectan con hongos"; }
